@@ -1,0 +1,15 @@
+[package]
+name = "dataset_creator"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rand = ">=0.7.3, < 0.9"
+petgraph = ">=0.4, <0.7"
+logaddexp = "0.1.1"
+libm = "0.1.4"
+statrs = ">= 0.11, < 0.17"
+rust-htslib = "*"
+bio = "*"
