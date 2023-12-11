@@ -36,25 +36,43 @@ const MAX_NODES_IN_POA: usize = 75_000;
 const SKIP_SCORE: i32 = 6_000;
 
 use std::io::{self, Read};
+use std::env;
+use std::process::{Command, Stdio};
+use std::str;
 
 fn main() {
-    // get the arguments and stuff
-    // test pipeling input
-    // thread runner 
-    //thread_runner("chr1", 5_000_000, 6_000_000);
-    let stdin = io::stdin();
-    let mut stdin = stdin.lock(); // locking is optional
-
-    let mut line = String::new();
-
-    // Could also `match` on the `Result` if you wanted to handle `Err` 
-    while let Ok(n_bytes) = stdin.read_to_string(&mut line) {
-        if n_bytes == 0 { break }
-        println!("{}", line);
-        line.clear();
+    // get the arguments 1. num of threads 2. read bam 3. subread bam
+    let args: Vec<String> = env::args().collect();
+    let num_of_threads = args[1].clone().parse::<usize>().unwrap();
+    let read_file_dir = args[2].clone();
+    let ps_child = Command::new("samtools") // `ps` command...
+        .arg("view")                  // with argument `axww`...
+        .arg(read_file_dir)
+        .stdout(Stdio::piped())       // of which we will pipe the output.
+        .spawn()                      // Once configured, we actually spawn the command...
+        .unwrap();                    // and assert everything went right.
+    let output = ps_child.wait_with_output().unwrap();
+    let result = str::from_utf8(&output.stdout).unwrap();
+    println!("done with reads!!!");
+    loop {
+        let mut input = String::new();
+        match io::stdin().read_line(&mut input) {
+            Ok(len) => if len == 0 {
+                return;
+            } else {
+                println!("{}", input);
+            }
+            Err(error) => {
+                eprintln!("error: {}", error);
+                return;
+            }
+        }
     }
 }
 
+fn read_read_and_make_temp_files() {
+
+}
 fn thread_runner (chromosone: &str, start: usize, end: usize) {
     // poa using 0.5 the threads save the graphs
     pipeline_save_the_graphs(chromosone, start, end, 1);
