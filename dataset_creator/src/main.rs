@@ -35,11 +35,24 @@ const BAND_SIZE: i32 = 100;
 const MAX_NODES_IN_POA: usize = 75_000;
 const SKIP_SCORE: i32 = 6_000;
 
+use std::io::{self, Read};
+
 fn main() {
     // get the arguments and stuff
-
+    // test pipeling input
     // thread runner 
-    thread_runner("chr1", 5_000_000, 6_000_000);
+    //thread_runner("chr1", 5_000_000, 6_000_000);
+    let stdin = io::stdin();
+    let mut stdin = stdin.lock(); // locking is optional
+
+    let mut line = String::new();
+
+    // Could also `match` on the `Result` if you wanted to handle `Err` 
+    while let Ok(n_bytes) = stdin.read_to_string(&mut line) {
+        if n_bytes == 0 { break }
+        println!("{}", line);
+        line.clear();
+    }
 }
 
 fn thread_runner (chromosone: &str, start: usize, end: usize) {
