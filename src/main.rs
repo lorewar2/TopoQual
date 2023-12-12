@@ -117,7 +117,7 @@ fn main() {
                 else {
                     //process the read
                     if subreads_vec.len() > 0 {
-                        println!("processing {} sub reads {}", current_read_name, subreads_vec.len());
+                        println!("processing {} sub reads {}: progress {}/{}", current_read_name, subreads_vec.len(), read_index, read_count);
                         one_function(read_name_vec[read_index].0.clone(), subreads_vec.clone(), ip_vec.clone(), pw_vec.clone(), sn_vec.clone());
                     }
                     // clear the vector, add the data
@@ -129,9 +129,10 @@ fn main() {
                     ip_vec.push(temp_subread_ip_vec);
                     sn_vec = temp_sn_vec;
                     // increment index
-                    read_index += 1;
+                    if read_index < read_count - 1 {
+                        read_index += 1;
+                    } 
                 }
-                return;
             }
             Err(error) => {
                 eprintln!("error: {}", error);
