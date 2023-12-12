@@ -41,7 +41,7 @@ use std::process::{Command, Stdio};
 use std::str;
 
 fn main() {
-    // get the arguments 1. num of threads 2. read bam 3. subread bam
+    // get the arguments 1. num of threads 2. read bam
     let args: Vec<String> = env::args().collect();
     let num_of_threads = args[1].clone().parse::<usize>().unwrap();
     let read_file_dir = args[2].clone();
@@ -52,25 +52,26 @@ fn main() {
         .spawn()                      // Once configured, we actually spawn the command...
         .unwrap();                    // and assert everything went right.
     let output = ps_child.wait_with_output().unwrap();
-    let result = str::from_utf8(&output.stdout).unwrap().lines().collect();
+    let result: Vec<_> = str::from_utf8(&output.stdout).unwrap().lines().collect();
+    println!("Collecting the reads");
     // save the reads and names
-    let mut reads_name: Vec<(Vec<u8>, String)> = vec![];
+    let mut read_count = 0;
+    let mut read_name: Vec<(String, String)> = vec![];
     for line in result {
-        let parts = line.split("\t");
-        let parts_vec = parts.collect::<Vec<&str>>();
-        println!("1 : {}", parts_vec[0]);
-        println!("9 : {}", parts_vec[9]);
+        let test = String::from(line);
+        let parts = test.split("\t").collect::<Vec<&str>>();
+        read_name.push((parts[9].to_string(), parts[0].to_string()));
+        read_count += 1;
         break;
     }
-
-    println!("done with reads!!!");
+    println!("Done collecting, Total reads = {}", read_count);
     loop {
         let mut input = String::new();
         match io::stdin().read_line(&mut input) {
             Ok(len) => if len == 0 {
                 return;
             } else {
-                println!("{}", input);
+                //println!("{}", input);
                 return;
             }
             Err(error) => {
