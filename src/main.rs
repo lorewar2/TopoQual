@@ -104,8 +104,9 @@ fn main() {
                 // get the read name
                 let subread_read_name = name_full.split("/").collect::<Vec<&str>>()[1];
                 println!("{}", name_full);
-                println!("{}", sub_read);
+                //println!("{}", sub_read);
                 let current_read_name = read_name_vec[read_index].1.split("/").collect::<Vec<&str>>()[1];
+                println!("{} {}", current_read_name, subread_read_name);
                 if current_read_name == subread_read_name {
                     // add data to vector
                     subreads_vec.push(sub_read);
