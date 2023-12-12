@@ -117,7 +117,7 @@ fn main() {
                     //process the read
                     if subreads_vec.len() > 0 {
                         println!("processing {} sub reads {}", current_read_name, subreads_vec.len());
-                        one_function(read_name_vec[read_index].clone(), subreads_vec.clone(), ip_vec, pw_vec, sn_vec);
+                        one_function(read_name_vec[read_index].0.clone(), subreads_vec.clone(), ip_vec, pw_vec, sn_vec);
                     }
                     // clear the vector, add the data
                     subreads_vec.clear();
@@ -175,7 +175,7 @@ fn one_function (read: String, mut sub_reads: Vec<String>, ip_str_vec: Vec<Vec<u
             return
         }
         sequence_number += 1;
-        println!("Thread {}: Sequence {} processed", thread_id, sequence_number);
+        println!("Sequence {} processed",  sequence_number);
     }
     let calculated_graph: &Graph<u8, i32, Directed, usize> = aligner.graph();
     // parallel bases!!
