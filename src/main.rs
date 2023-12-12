@@ -56,7 +56,10 @@ fn main() {
     // save the reads and names
     let mut reads_name: Vec<(Vec<u8>, String)> = vec![];
     for line in result {
-        println!("{}", line);
+        let parts = line.split("\t");
+        let parts_vec = parts.collect::<Vec<&str>>();
+        println!("1 : {}", parts_vec[0]);
+        println!("9 : {}", parts_vec[9]);
         break;
     }
 
@@ -68,6 +71,7 @@ fn main() {
                 return;
             } else {
                 println!("{}", input);
+                return;
             }
             Err(error) => {
                 eprintln!("error: {}", error);
