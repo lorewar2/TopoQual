@@ -52,7 +52,14 @@ fn main() {
         .spawn()                      // Once configured, we actually spawn the command...
         .unwrap();                    // and assert everything went right.
     let output = ps_child.wait_with_output().unwrap();
-    let result = str::from_utf8(&output.stdout).unwrap();
+    let result = str::from_utf8(&output.stdout).unwrap().lines().collect();
+    // save the reads and names
+    let mut reads_name: Vec<(Vec<u8>, String)> = vec![];
+    for line in result {
+        println!("{}", line);
+        break;
+    }
+
     println!("done with reads!!!");
     loop {
         let mut input = String::new();
