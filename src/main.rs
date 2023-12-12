@@ -65,13 +65,27 @@ fn main() {
         break;
     }
     println!("Done collecting, Total reads = {}", read_count);
+    let mut read_index = 0;
+    let mut subread_count = 0;
+    let mut subreads_vec: Vec<(String, String, String, String)> = vec![]; //bases, ip, pw, sn
     loop {
         let mut input = String::new();
         match io::stdin().read_line(&mut input) {
             Ok(len) => if len == 0 {
                 return;
             } else {
-                //println!("{}", input);
+                // get all the required info
+                let parts = input.split("\t").collect::<Vec<&str>>();
+                let name_full = parts[0];
+                let sub_read = parts[10];
+                let ip = parts[14];
+                let pw = parts[16];
+                let sn = parts[20];
+                println!("{}", name_full);
+                println!("{}", sub_read);
+                println!("{}", ip);
+                println!("{}", pw);
+                println!("{}", sn);
                 return;
             }
             Err(error) => {
@@ -82,9 +96,6 @@ fn main() {
     }
 }
 
-fn read_read_and_make_temp_files() {
-
-}
 fn thread_runner (chromosone: &str, start: usize, end: usize) {
     // poa using 0.5 the threads save the graphs
     pipeline_save_the_graphs(chromosone, start, end, 1);
