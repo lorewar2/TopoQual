@@ -59,8 +59,8 @@ fn main() {
     let mut read_name_vec: Vec<(String, String)> = vec![];
     for line in result {
         let test = String::from(line);
-        let parts = test.split("\t").collect::<Vec<String>>();
-        read_name_vec.push((parts[9], parts[0]));
+        let parts = test.split("\t").collect::<Vec<&str>>();
+        read_name_vec.push((parts[9].to_string(), parts[0].to_string()));
         read_count += 1;
         break;
     }
@@ -77,9 +77,9 @@ fn main() {
                 return;
             } else {
                 // get all the required info
-                let parts = input.split("\t").collect::<Vec<String>>();
-                let name_full = parts[0];
-                let sub_read = parts[9];
+                let parts = input.split("\t").collect::<Vec<&str>>();
+                let name_full = parts[0].to_string();
+                let sub_read = parts[9].to_string();
                 let mut temp_subread_ip_vec = vec![];
                 let mut temp_subread_pw_vec = vec![];
                 let mut temp_sn_vec = vec![];
@@ -102,10 +102,10 @@ fn main() {
                 //println!("lengths {} == {} == {}", temp_subread_ip_vec.len(), temp_subread_pw_vec.len(), collection[9].to_string().len());
                 
                 // get the read name
-                let subread_read_name = name_full.split("/").collect::<Vec<String>>()[1];
+                let subread_read_name = name_full.split("/").collect::<Vec<&str>>()[1];
                 println!("{}", name_full);
                 println!("{}", sub_read);
-                current_read_name = read_name_vec[read_index].1.split("/").collect::<Vec<String>>()[1];
+                current_read_name = read_name_vec[read_index].1.split("/").collect::<Vec<&str>>()[1];
                 if current_read_name == subread_read_name {
                     // add data to vector
                     subreads_vec.push(sub_read);
