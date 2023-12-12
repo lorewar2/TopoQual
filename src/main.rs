@@ -56,18 +56,20 @@ fn main() {
     println!("Collecting the reads");
     // save the reads and names
     let mut read_count = 0;
-    let mut read_name: Vec<(String, String)> = vec![];
+    let mut read_name_vec: Vec<(String, String)> = vec![];
     for line in result {
         let test = String::from(line);
-        let parts = test.split("\t").collect::<Vec<&str>>();
-        read_name.push((parts[9].to_string(), parts[0].to_string()));
+        let parts = test.split("\t").collect::<Vec<String>>();
+        read_name_vec.push((parts[9], parts[0]));
         read_count += 1;
         break;
     }
     println!("Done collecting, Total reads = {}", read_count);
     let mut read_index = 0;
-    let mut subread_count = 0;
-    let mut subreads_vec: Vec<(String, String, String, String)> = vec![]; //bases, ip, pw, sn
+    let mut subreads_vec: Vec<String> = vec![]; //bases, ip, pw, sn
+    let mut ip_vec: Vec<Vec<usize>> = vec![];
+    let mut pw_vec: Vec<Vec<usize>> = vec![];
+    let mut sn_vec: Vec<f32> = vec![];
     loop {
         let mut input = String::new();
         match io::stdin().read_line(&mut input) {
@@ -75,17 +77,59 @@ fn main() {
                 return;
             } else {
                 // get all the required info
-                let parts = input.split("\t").collect::<Vec<&str>>();
+                let parts = input.split("\t").collect::<Vec<String>>();
                 let name_full = parts[0];
-                let sub_read = parts[10];
-                let ip = parts[14];
-                let pw = parts[16];
-                let sn = parts[20];
+                let sub_read = parts[9];
+                let mut temp_subread_ip_vec = vec![];
+                let mut temp_subread_pw_vec = vec![];
+                let mut temp_sn_vec = vec![];
+                let mut ip_collection: Vec<&str> = parts[13].split(",").collect();
+                ip_collection.remove(0);
+                for ip in ip_collection {
+                    temp_subread_ip_vec.push(ip.parse::<usize>().unwrap());
+                }
+                // process pw, parse to usize
+                let mut pw_collection: Vec<&str> = parts[15].split(",").collect();
+                pw_collection.remove(0);
+                for pw in pw_collection {
+                    temp_subread_pw_vec.push(pw.parse::<usize>().unwrap());
+                }
+                let mut sn_collection: Vec<&str> = parts[19].split(",").collect();
+                sn_collection.remove(0);
+                for sn in sn_collection {
+                    temp_sn_vec.push(sn.parse::<f32>().unwrap());
+                }
+                //println!("lengths {} == {} == {}", temp_subread_ip_vec.len(), temp_subread_pw_vec.len(), collection[9].to_string().len());
+                
+                // get the read name
+                let subread_read_name = name_full.split("/").collect::<Vec<String>>()[1];
                 println!("{}", name_full);
                 println!("{}", sub_read);
-                println!("{}", ip);
-                println!("{}", pw);
-                println!("{}", sn);
+                current_read_name = read_name_vec[read_index].1.split("/").collect::<Vec<String>>()[1];
+                if current_read_name == subread_read_name {
+                    // add data to vector
+                    subreads_vec.push(sub_read);
+                    pw_vec.push(temp_subread_pw_vec);
+                    ip_vec.push(temp_subread_ip_vec);
+                    sn_vec = temp_sn_vec;
+                }
+                else {
+                    //process the read
+                    if subreads_vec.len() > 0 {
+                        println!("processing {} sub reads {}", current_read_name, subreads_vec.len());
+                        one_function(read, subread_vec, ip_vec, pw_vec, sn_vec);
+                    }
+                    // clear the vector, add the data
+                    subreads_vec.clear();
+                    pw_vec.clear();
+                    ip_vec.clear();
+                    subreads_vec.push(sub_read);
+                    pw_vec.push(temp_subread_pw_vec);
+                    ip_vec.push(temp_subread_ip_vec);
+                    sn_vec = temp_sn_vec;
+                    // increment index
+                    read_index += 1;
+                }
                 return;
             }
             Err(error) => {
@@ -108,6 +152,35 @@ fn thread_runner (chromosone: &str, start: usize, end: usize) {
     // map with reference
     get_all_data_for_ml(chromosone, start, end, 1);
     // save dataset
+}
+
+fn one_function (read: String, subreads: Vec<String>, ip_str_vec: String, pw_str_vec: String, sn_str_vec: String) {
+    // graph!!
+    // filter out the long reads and rearrange the reads
+    sub_reads = reverse_complement_filter_and_rearrange_subreads(&sub_reads);
+    // reverse if score is too low
+    sub_reads = check_the_scores_and_change_alignment(sub_reads, &read);
+    // put the read in first pos
+    sub_reads.insert(0, read);
+    // do poa with the read and subreads, get the poa and consensus
+    let mut sequence_number: usize = 0;
+    let mut aligner = Aligner::new(MATCH, MISMATCH, GAP_OPEN, &sub_reads[0].as_bytes().to_vec(), BAND_SIZE);
+    for sub_read in &sub_reads {
+        if sequence_number != 0 {
+            aligner.global(&sub_read.as_bytes().to_vec()).add_to_graph();
+        }
+        let node_num = aligner.graph().node_count();
+        if node_num > MAX_NODES_IN_POA {
+            println!("NUM OF NODES {} TOO BIG, SKIPPING", node_num);
+            return
+        }
+        sequence_number += 1;
+        println!("Thread {}: Sequence {} processed", thread_id, sequence_number);
+    }
+    let calculated_graph: &Graph<u8, i32, Directed, usize> = aligner.graph();
+    // parallel bases!!
+
+    return
 }
 
 fn pipeline_save_the_graphs (chromosone: &str, start: usize, end: usize, thread_id: usize) {
