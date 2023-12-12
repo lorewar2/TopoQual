@@ -117,7 +117,7 @@ fn main() {
                     //process the read
                     if subreads_vec.len() > 0 {
                         println!("processing {} sub reads {}", current_read_name, subreads_vec.len());
-                        one_function(read_name_vec[read_index].0.clone(), subreads_vec.clone(), ip_vec, pw_vec, sn_vec);
+                        one_function(read_name_vec[read_index].0.clone(), subreads_vec.clone(), ip_vec.clone(), pw_vec.clone(), sn_vec.clone());
                     }
                     // clear the vector, add the data
                     subreads_vec.clear();
