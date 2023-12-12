@@ -105,7 +105,7 @@ fn main() {
                 let subread_read_name = name_full.split("/").collect::<Vec<&str>>()[1];
                 println!("{}", name_full);
                 println!("{}", sub_read);
-                current_read_name = read_name_vec[read_index].1.split("/").collect::<Vec<&str>>()[1];
+                let current_read_name = read_name_vec[read_index].1.split("/").collect::<Vec<&str>>()[1];
                 if current_read_name == subread_read_name {
                     // add data to vector
                     subreads_vec.push(sub_read);
@@ -117,7 +117,7 @@ fn main() {
                     //process the read
                     if subreads_vec.len() > 0 {
                         println!("processing {} sub reads {}", current_read_name, subreads_vec.len());
-                        one_function(read, subread_vec, ip_vec, pw_vec, sn_vec);
+                        one_function(read_name_vec[read_index].clone(), subreads_vec.clone(), ip_vec, pw_vec, sn_vec);
                     }
                     // clear the vector, add the data
                     subreads_vec.clear();
@@ -154,7 +154,7 @@ fn thread_runner (chromosone: &str, start: usize, end: usize) {
     // save dataset
 }
 
-fn one_function (read: String, subreads: Vec<String>, ip_str_vec: String, pw_str_vec: String, sn_str_vec: String) {
+fn one_function (read: String, mut sub_reads: Vec<String>, ip_str_vec: Vec<Vec<usize>>, pw_str_vec: Vec<Vec<usize>>, sn_str_vec: Vec<f32>) {
     // graph!!
     // filter out the long reads and rearrange the reads
     sub_reads = reverse_complement_filter_and_rearrange_subreads(&sub_reads);
