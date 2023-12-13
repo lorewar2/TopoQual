@@ -175,6 +175,7 @@ fn one_function (read: String, quality: String, mut sub_reads: Vec<String>, mut 
     let parallel_bases_vec = get_consensus_parallel_bases(sub_reads.len(), &calculated_consensus, &calculated_topology, &calculated_graph, 1);
     // align all subreads to ccs
     println!("aligning stuff...");
+    sub_reads.remove(0);
     let (ip_vec, pw_vec) = align_subreads_to_ccs_read_calculate_avg_ip_pw(&read, sub_reads, ip_vec, pw_vec);
     // match the calculated consensus to the original consensus and get the required indices
     let calc_cons_id = get_redone_consensus_matched_positions(&read, &calculated_consensus);
