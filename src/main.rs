@@ -222,7 +222,7 @@ fn one_function (read: String, quality: String, mut sub_reads: Vec<String>, mut 
             pacbio_str = format!{"SB({})", calc_cons_id[index].1 as char};
         }
         let write_string = format!("{} : {} {} {} {} {:?} {} {} {:?}\n", quality_vec_chr[index], index, read.len(), read_sevenbase_context, pacbio_str, sn_vec, ip_vec[index], pw_vec[index], parallel_bases);
-        println!("{}", write_string);
+        print!("{}", write_string);
     }
     return
 }
@@ -751,6 +751,7 @@ fn align_subreads_to_ccs_read_calculate_avg_ip_pw(pacbio_ccs_str: &String, subre
 
     let pacbio_ccs: Vec<u8> = pacbio_ccs_str.bytes().collect();
     let mut current_sub_read = 0;
+    println!("Length of sub vec {}", subread_vec.len());
     for subread_str in subread_vec {
         let subread: Vec<u8> = subread_str.bytes().collect();
         let score_func = |a: u8, b: u8| if a == b { 2i32 } else { -2i32 };
@@ -784,8 +785,10 @@ fn align_subreads_to_ccs_read_calculate_avg_ip_pw(pacbio_ccs_str: &String, subre
             }
         }
         current_sub_read += 1;
+        println!("Incrementing: {}", current_sub_read);
     }
     // average the sum vectors
+    println!("Final: {}", current_sub_read);
     for index in 0..pacbio_ccs_str.len() {
         pacbio_ccs_ip_vec[index] = pacbio_ccs_ip_vec[index] / current_sub_read;
         pacbio_ccs_pw_vec[index] = pacbio_ccs_pw_vec[index] / current_sub_read;
