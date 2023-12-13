@@ -51,7 +51,6 @@ fn thread_runner (read_file_dir: String, _num_of_threads: usize) {
         let parts = test.split("\t").collect::<Vec<&str>>();
         read_name_vec.push((parts[9].to_string(), parts[10].to_string(), parts[0].to_string()));
         read_count += 1;
-        break;
     }
     println!("Done collecting, Total reads = {}", read_count);
     // sub read processing and call functions appropriately
@@ -136,6 +135,9 @@ fn one_function (read: String, quality: String, mut sub_reads: Vec<String>, mut 
     (sub_reads, pw_vec, ip_vec) = reverse_complement_subreads_ip_pw(&sub_reads, pw_vec, ip_vec);
     // reverse if score is too low
     (sub_reads, pw_vec, ip_vec) = check_the_scores_and_change_alignment_subreads_pw_ip(sub_reads, pw_vec, ip_vec, &read);
+    if sub_reads.len() == 0 {
+        return
+    }
     // put the read in first pos
     sub_reads.insert(0, read.clone());
     // do poa with the read and subreads, get the poa and consensus
@@ -751,7 +753,6 @@ fn align_subreads_to_ccs_read_calculate_avg_ip_pw(pacbio_ccs_str: &String, subre
 
     let pacbio_ccs: Vec<u8> = pacbio_ccs_str.bytes().collect();
     let mut current_sub_read = 0;
-    println!("Length of sub vec {}", subread_vec.len());
     for subread_str in subread_vec {
         let subread: Vec<u8> = subread_str.bytes().collect();
         let score_func = |a: u8, b: u8| if a == b { 2i32 } else { -2i32 };
@@ -785,10 +786,8 @@ fn align_subreads_to_ccs_read_calculate_avg_ip_pw(pacbio_ccs_str: &String, subre
             }
         }
         current_sub_read += 1;
-        println!("Incrementing: {}", current_sub_read);
     }
     // average the sum vectors
-    println!("Final: {}", current_sub_read);
     for index in 0..pacbio_ccs_str.len() {
         pacbio_ccs_ip_vec[index] = pacbio_ccs_ip_vec[index] / current_sub_read;
         pacbio_ccs_pw_vec[index] = pacbio_ccs_pw_vec[index] / current_sub_read;
