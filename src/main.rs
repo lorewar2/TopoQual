@@ -146,7 +146,7 @@ fn thread_runner (read_file_dir: String, num_of_threads: usize) {
     }
 }
 
-fn one_function (read: String, quality: String, mut sub_reads: Vec<String>, mut ip_vec: Vec<Vec<usize>>, mut pw_vec: Vec<Vec<usize>>, sn_str_vec: Vec<f32>) {
+fn one_function (read: String, quality: String, mut sub_reads: Vec<String>, mut ip_vec: Vec<Vec<usize>>, mut pw_vec: Vec<Vec<usize>>, sn_vec: Vec<f32>) {
     // graph!!
     // filter out the long reads and rearrange the reads
     (sub_reads, pw_vec, ip_vec) = reverse_complement_subreads_ip_pw(&sub_reads, pw_vec, ip_vec);
@@ -355,14 +355,6 @@ fn check_the_scores_and_change_alignment (seqvec: Vec<String>, pacbio_consensus:
     else {
         return seqvec;
     }
-}
-
-fn write_string_to_file (file_name: &String, input_string: &String) {
-    let path = std::path::Path::new(&file_name);
-    let prefix = path.parent().unwrap();
-    create_dir_all(prefix).unwrap();
-    let mut file = OpenOptions::new().create(true).append(true).open(file_name).unwrap();
-    write!(file, "{}", input_string).expect("result file cannot be written");
 }
 
 fn reverse_complement_subreads_ip_pw (original_subreads: &Vec<String>, mut pw_vec: Vec<Vec<usize>>, mut ip_vec: Vec<Vec<usize>>) -> (Vec<String>, Vec<Vec<usize>>, Vec<Vec<usize>>) {
@@ -990,16 +982,4 @@ pub fn get_required_start_end_positions_from_read (section_length: usize, curren
         p2 = current_read_pos + section_length;
     }
     (p1, p2)
-}
-
-fn write_string_to_newfile (file_name: &String, input_string: &String) {
-    let path = std::path::Path::new(&file_name);
-    let prefix = path.parent().unwrap();
-    match remove_file(path) {
-        Ok(_) => {},
-        Err(_) => {}
-    };
-    create_dir_all(prefix).unwrap();
-    let mut file = OpenOptions::new().create(true).write(true).open(file_name).unwrap();
-    writeln!(file, "{}", input_string).expect("result file cannot be written");
 }
