@@ -8,7 +8,6 @@ use petgraph::visit::Topo;
 use petgraph::Direction::Outgoing;
 use rust_htslib::bam::{Read as BamRead, IndexedReader as BamIndexedReader};
 use rust_htslib::faidx;
-use std::{fs::OpenOptions, io::{prelude::*}};
 use std::io::BufReader;
 use std::fs::File;
 use std::fs::remove_file;
@@ -45,28 +44,35 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     let num_of_threads = args[1].clone().parse::<usize>().unwrap();
     let read_file_dir = args[2].clone();
-    let ps_child = Command::new("samtools") // `ps` command...
-        .arg("view")                  // with argument `axww`...
+    // read bam and run threads to poa, parallel output
+    thread_runner(read_file_dir, num_of_threads);
+}
+
+fn thread_runner (read_file_dir: String, num_of_threads: usize) {
+    // make a process to read the reads and save it in memomory
+    let ps_child = Command::new("samtools")
+        .arg("view")      
         .arg(read_file_dir)
-        .stdout(Stdio::piped())       // of which we will pipe the output.
-        .spawn()                      // Once configured, we actually spawn the command...
-        .unwrap();                    // and assert everything went right.
+        .stdout(Stdio::piped())
+        .spawn()                 
+        .unwrap();
     let output = ps_child.wait_with_output().unwrap();
     let result: Vec<_> = str::from_utf8(&output.stdout).unwrap().lines().collect();
     println!("Collecting the reads");
     // save the reads and names
     let mut read_count = 0;
-    let mut read_name_vec: Vec<(String, String)> = vec![];
+    let mut read_name_vec: Vec<(String, String, String)> = vec![]; // read quality name
     for line in result {
         let test = String::from(line);
         let parts = test.split("\t").collect::<Vec<&str>>();
-        read_name_vec.push((parts[9].to_string(), parts[0].to_string()));
+        read_name_vec.push((parts[9].to_string(), parts[10].to_string(), parts[0].to_string()));
         read_count += 1;
         break;
     }
     println!("Done collecting, Total reads = {}", read_count);
+    // sub read processing and call functions appropriately
     let mut read_index = 0;
-    let mut subreads_vec: Vec<String> = vec![]; //bases, ip, pw, sn
+    let mut subreads_vec: Vec<String> = vec![];
     let mut ip_vec: Vec<Vec<usize>> = vec![];
     let mut pw_vec: Vec<Vec<usize>> = vec![];
     let mut sn_vec: Vec<f32> = vec![];
@@ -99,13 +105,10 @@ fn main() {
                 for sn in sn_collection {
                     temp_sn_vec.push(sn.parse::<f32>().unwrap());
                 }
-                //println!("lengths {} == {} == {}", temp_subread_ip_vec.len(), temp_subread_pw_vec.len(), collection[9].to_string().len());
-                
                 // get the read name
                 let subread_read_name = name_full.split("/").collect::<Vec<&str>>()[1];
                 println!("{}", name_full);
-                //println!("{}", sub_read);
-                let current_read_name = read_name_vec[read_index].1.split("/").collect::<Vec<&str>>()[1];
+                let current_read_name = read_name_vec[read_index].2.split("/").collect::<Vec<&str>>()[1];
                 println!("{} {}", current_read_name, subread_read_name);
                 if current_read_name == subread_read_name {
                     // add data to vector
@@ -118,7 +121,7 @@ fn main() {
                     //process the read
                     if subreads_vec.len() > 0 {
                         println!("processing {} sub reads {}: progress {}/{}", current_read_name, subreads_vec.len(), read_index, read_count);
-                        one_function(read_name_vec[read_index].0.clone(), subreads_vec.clone(), ip_vec.clone(), pw_vec.clone(), sn_vec.clone());
+                        one_function(read_name_vec[read_index].0.clone(), read_name_vec[read_index].1.clone(), subreads_vec.clone(), ip_vec.clone(), pw_vec.clone(), sn_vec.clone());
                     }
                     // clear the vector, add the data
                     subreads_vec.clear();
@@ -129,8 +132,9 @@ fn main() {
                     ip_vec.push(temp_subread_ip_vec);
                     sn_vec = temp_sn_vec;
                     // increment index
-                    if read_index < read_count - 1 {
-                        read_index += 1;
+                    read_index += 1;
+                    if read_index > read_count - 1 {
+                        return;
                     } 
                 }
             }
@@ -142,26 +146,12 @@ fn main() {
     }
 }
 
-fn thread_runner (chromosone: &str, start: usize, end: usize) {
-    // poa using 0.5 the threads save the graphs
-    pipeline_save_the_graphs(chromosone, start, end, 1);
-    // wait till complete
-
-    // load graph
-    pipeline_load_graph_get_topological_parallel_bases(chromosone, start, end, 1);
-    // wait till complete 
-
-    // map with reference
-    get_all_data_for_ml(chromosone, start, end, 1);
-    // save dataset
-}
-
-fn one_function (read: String, mut sub_reads: Vec<String>, ip_str_vec: Vec<Vec<usize>>, pw_str_vec: Vec<Vec<usize>>, sn_str_vec: Vec<f32>) {
+fn one_function (read: String, quality: String, mut sub_reads: Vec<String>, mut ip_vec: Vec<Vec<usize>>, mut pw_vec: Vec<Vec<usize>>, sn_str_vec: Vec<f32>) {
     // graph!!
     // filter out the long reads and rearrange the reads
-    sub_reads = reverse_complement_filter_and_rearrange_subreads(&sub_reads);
+    (sub_reads, pw_vec, ip_vec) = reverse_complement_subreads_ip_pw(&sub_reads, pw_vec, ip_vec);
     // reverse if score is too low
-    sub_reads = check_the_scores_and_change_alignment(sub_reads, &read);
+    (sub_reads, pw_vec, ip_vec) = check_the_scores_and_change_alignment_subreads_pw_ip(sub_reads, pw_vec, ip_vec, &read);
     // put the read in first pos
     sub_reads.insert(0, read);
     // do poa with the read and subreads, get the poa and consensus
@@ -181,83 +171,75 @@ fn one_function (read: String, mut sub_reads: Vec<String>, ip_str_vec: Vec<Vec<u
     }
     let calculated_graph: &Graph<u8, i32, Directed, usize> = aligner.graph();
     // parallel bases!!
-
-    return
-}
-
-fn pipeline_save_the_graphs (chromosone: &str, start: usize, end: usize, thread_id: usize) {
-    let mut big_file_skip_count = 0;
-    let mut index_thread = 0;
-    let mut skip_thousand = false;
-    let mut skip_index = 0;
-    'bigloop: for process_location in start..end {
-        // skip thousand when same found
-        if skip_thousand {
-            skip_index += 1;
-            if skip_index > 5000 {
-                skip_thousand = false;
-                skip_index = 0;
-            }
-            else {
-                continue;
-            }
+    let (calculated_consensus, calculated_topology) = get_consensus_from_graph(&calculated_graph); //just poa
+    let parallel_bases_vec = get_consensus_parallel_bases(sub_reads.len(), &calculated_consensus, &calculated_topology, &calculated_graph, 1);
+    // align all subreads to ccs
+    println!("aligning stuff...");
+    let (ip_vec, pw_vec) = align_subreads_to_ccs_read_calculate_avg_ip_pw(&read, sub_reads, ip_vec, pw_vec);
+    // match the calculated consensus to the original consensus and get the required indices
+    let calc_cons_id = get_redone_consensus_matched_positions(&read, &calculated_consensus);
+    let quality_vec_chr = quality.as_bytes().to_vec();
+    for (index, pacbio_base) in read.as_bytes().to_vec().iter().enumerate() {
+        let char_sequence: Vec<char> = read.chars().collect::<Vec<_>>();
+        let mut char_7base_context: Vec<char> = vec![];
+        // when 7 base context above 0 this is very dumb re write
+        if index >= 3 {
+            char_7base_context.push(char_sequence[index - 3]);
         }
-        println!("NEW LOCATION, Thread {}: Chr {} Loc {}, tasks_done {} skipped {}", thread_id, chromosone, process_location, index_thread, big_file_skip_count);
-        // get the string and the name
-        let seq_name_qual_and_errorpos_vec = get_corrosponding_seq_name_location_quality_from_bam(process_location, &chromosone.to_string(), &'X');
-        let mut all_skipped = true;
-        for seq_name_qual_and_errorpos in &seq_name_qual_and_errorpos_vec {
-            println!("Thread {}: Chr {} Loc {} Processing ccs file: {}", thread_id, chromosone, process_location, seq_name_qual_and_errorpos.1);
-            // check if the graph is already available
-            let check_file = format!("{}_graph.txt", &seq_name_qual_and_errorpos.1);
-            if check_file_availability(&check_file, INTERMEDIATE_PATH) {
-                println!("Thread {}: File Available, skipping", thread_id);
-                continue;
-            }
-            // if not available do poa and make a file
-            // find the subreads of that ccs
-            let (mut sub_reads, _, _ ,_) = get_the_subreads_by_name_sam(&seq_name_qual_and_errorpos.1);
-            // skip if no subreads, errors and stuff
-            if sub_reads.len() == 0 {
-                continue;
-            }
-            all_skipped = false;
-            // filter out the long reads and rearrange the reads
-            sub_reads = reverse_complement_filter_and_rearrange_subreads(&sub_reads);
-            // reverse if score is too low
-            sub_reads = check_the_scores_and_change_alignment(sub_reads, &seq_name_qual_and_errorpos.0);
-            if sub_reads.len() == 0 {
-                skip_thousand = true;
-                continue 'bigloop;
-            }
-
-            sub_reads.insert(0, seq_name_qual_and_errorpos.0.clone());
-            // do poa with the read and subreads, get the poa and consensus
-            let mut sequence_number: usize = 0;
-            let mut aligner = Aligner::new(MATCH, MISMATCH, GAP_OPEN, &sub_reads[0].as_bytes().to_vec(), BAND_SIZE);
-            
-            for sub_read in &sub_reads {
-                if sequence_number != 0 {
-                    aligner.global(&sub_read.as_bytes().to_vec()).add_to_graph();
-                }
-                let node_num = aligner.graph().node_count();
-                if node_num > MAX_NODES_IN_POA {
-                    println!("NUM OF NODES {} TOO BIG, SKIPPING TOTAL SKIPPED: {} ", node_num, big_file_skip_count + 1);
-                    big_file_skip_count += 1;
-                    skip_thousand = true;
-                    continue 'bigloop;
-                }
-                sequence_number += 1;
-                println!("Thread {}: Sequence {} processed", thread_id, sequence_number);
-            }
-            let calculated_graph: &Graph<u8, i32, Directed, usize> = aligner.graph();
-            save_the_graph(calculated_graph, &seq_name_qual_and_errorpos.1);
-            index_thread += 1;
+        else {
+            char_7base_context.push('X');
         }
-        if all_skipped {
-            skip_thousand = true;
+        if index >= 2 {
+            char_7base_context.push(char_sequence[index - 2]);
         }
+        else {
+            char_7base_context.push('X');
+        }
+        if index >= 1 {
+            char_7base_context.push(char_sequence[index - 1]);
+        }
+        else {
+            char_7base_context.push('X');
+        }
+        char_7base_context.push(char_sequence[index]);
+        // when len is greater than 7 base context
+        if read.len() > (1 + index) {
+            char_7base_context.push(char_sequence[index + 1]);
+        }
+        // when len is less than 7 base context
+        else {
+            char_7base_context.push('X');
+        }
+        if read.len() > (2 + index) {
+            char_7base_context.push(char_sequence[index + 2]);
+        }
+        else{
+            char_7base_context.push('X');
+        }
+        if read.len() > (3 + index) {
+            char_7base_context.push(char_sequence[index + 3]);
+        }
+        else{
+            char_7base_context.push('X');
+        }
+        let read_sevenbase_context = char_7base_context.iter().collect::<String>();
+        let mut pacbio_str = format!("OK({})", *pacbio_base as char);
+        let parallel_bases;
+        if calc_cons_id[index].1 == 0 {
+            parallel_bases = vec![1, 1, 1, 1]; //deletion
+            pacbio_str = "DEL()".to_string();
+        }
+        else if calc_cons_id[index].1 == 1 {
+            parallel_bases = parallel_bases_vec[calc_cons_id[index].0].clone(); //normal
+        }
+        else {
+            parallel_bases = parallel_bases_vec[calc_cons_id[index].0].clone(); //subsitution the value corrospond to the sub
+            pacbio_str = format!{"SB({})", calc_cons_id[index].1 as char};
+        }
+        let write_string = format!("{} : {} {} {} {} {:?} {} {} {:?}\n", quality_vec_chr[index], index, read.len(), read_sevenbase_context, pacbio_str, sn_vec, ip_vec[index], pw_vec[index], parallel_bases);
+        println!("{}", write_string);
     }
+    return
 }
 
 fn get_all_data_for_ml (chromosone: &str, start: usize, end: usize, thread_id: usize) {
@@ -330,7 +312,7 @@ fn get_all_data_for_ml (chromosone: &str, start: usize, end: usize, thread_id: u
                 continue;
             }
             let read_position = seq_name_qual_and_errorpos.3;
-            let read_len =  seq_name_qual_and_errorpos.0.len();
+            let read_len =  read.len();
             // write data
             let write_string = format!("{} {} {} : {} {} {} {}", position_base, ref_sevenbase_context, quality, read_position, read_len, read_sevenbase_context, parallel_stuff);
             let write_file = format!("{}/{}_mldata.txt", RESULT_WRITE_PATH, thread_id);
