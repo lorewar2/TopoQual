@@ -7,6 +7,7 @@ use petgraph::visit::Topo;
 use petgraph::Direction::Outgoing;
 use std::cmp;
 use petgraph::{Incoming, Direction};
+use std::thread;
 
 const PRINT_ALL: bool = false;
 const USEPACBIODATA: bool = true;
@@ -32,7 +33,9 @@ fn main() {
     thread_runner(read_file_dir, num_of_threads);
 }
 
-fn thread_runner (read_file_dir: String, _num_of_threads: usize) {
+fn thread_runner (read_file_dir: String, num_of_threads: usize) {
+    let mut threads_used = 0;
+    let mut children = vec![];
     // make a process to read the reads and save it in memomory
     let ps_child = Command::new("samtools")
         .arg("view")      
@@ -104,7 +107,24 @@ fn thread_runner (read_file_dir: String, _num_of_threads: usize) {
                     //process the read
                     if subreads_vec.len() > 0 {
                         println!("processing {} sub reads {}: progress {}/{}", current_read_name, subreads_vec.len(), read_index, read_count);
-                        one_function(read_name_vec[read_index].0.clone(), read_name_vec[read_index].1.clone(), subreads_vec.clone(), ip_vec.clone(), pw_vec.clone(), sn_vec.clone());
+                        let read = read_name_vec[read_index].0.clone();
+                        let name = read_name_vec[read_index].1.clone();
+                        let subreads = subreads_vec.clone();
+                        let ip_stuff = ip_vec.clone();
+                        let pw_stuff = pw_vec.clone();
+                        let sn_stuff = sn_vec.clone();
+                        children.push(thread::spawn(move || {
+                            one_function(read, name, subreads, ip_stuff, pw_stuff, sn_stuff);
+                        }));
+                        threads_used += 1;
+                        if threads_used == num_of_threads {
+                            println!("Waiting for threads to finish......");
+                            for child_index in 0..children.len() {
+                                let _ = children.pop().unwrap().join();
+                                println!("Threads done {}/{}", child_index, num_of_threads);
+                            }
+                            threads_used = 0;
+                        }
                     }
                     // clear the vector, add the data
                     subreads_vec.clear();
