@@ -114,7 +114,7 @@ fn thread_runner (read_file_dir: String, num_of_threads: usize) {
                         let pw_stuff = pw_vec.clone();
                         let sn_stuff = sn_vec.clone();
                         children.push(thread::spawn(move || {
-                            one_function(read, name, subreads, ip_stuff, pw_stuff, sn_stuff);
+                            one_function(read, name, subreads, ip_stuff, pw_stuff, sn_stuff, threads_used);
                         }));
                         threads_used += 1;
                         if threads_used == num_of_threads {
@@ -149,7 +149,7 @@ fn thread_runner (read_file_dir: String, num_of_threads: usize) {
     }
 }
 
-fn one_function (read: String, quality: String, mut sub_reads: Vec<String>, mut ip_vec: Vec<Vec<usize>>, mut pw_vec: Vec<Vec<usize>>, sn_vec: Vec<f32>) {
+fn one_function (read: String, quality: String, mut sub_reads: Vec<String>, mut ip_vec: Vec<Vec<usize>>, mut pw_vec: Vec<Vec<usize>>, sn_vec: Vec<f32>, thread_id: usize) {
     // graph!!
     // filter out the long reads and rearrange the reads
     (sub_reads, pw_vec, ip_vec) = reverse_complement_subreads_ip_pw(&sub_reads, pw_vec, ip_vec);
@@ -169,18 +169,18 @@ fn one_function (read: String, quality: String, mut sub_reads: Vec<String>, mut 
         }
         let node_num = aligner.graph().node_count();
         if node_num > MAX_NODES_IN_POA {
-            println!("NUM OF NODES {} TOO BIG, SKIPPING", node_num);
+            println!("Thread {} : NUM OF NODES {} TOO BIG, SKIPPING", thread_id, node_num);
             return
         }
         sequence_number += 1;
-        println!("Sequence {} processed",  sequence_number);
+        println!("Thread {} : Sequence {} processed",  thread_id, sequence_number);
     }
     let calculated_graph: &Graph<u8, i32, Directed, usize> = aligner.graph();
     // parallel bases!!
     let (calculated_consensus, calculated_topology) = get_consensus_from_graph(&calculated_graph); //just poa
-    let parallel_bases_vec = get_consensus_parallel_bases(sub_reads.len(), &calculated_consensus, &calculated_topology, &calculated_graph, 1);
+    let parallel_bases_vec = get_consensus_parallel_bases(sub_reads.len(), &calculated_consensus, &calculated_topology, &calculated_graph, thread_id);
     // align all subreads to ccs
-    println!("aligning stuff...");
+    println!("Thread {} :aligning stuff...", thread_id);
     sub_reads.remove(0);
     let (ip_vec, pw_vec) = align_subreads_to_ccs_read_calculate_avg_ip_pw(&read, sub_reads, ip_vec, pw_vec);
     // match the calculated consensus to the original consensus and get the required indices
@@ -243,8 +243,8 @@ fn one_function (read: String, quality: String, mut sub_reads: Vec<String>, mut 
             parallel_bases = parallel_bases_vec[calc_cons_id[index].0].clone(); //subsitution the value corrospond to the sub
             pacbio_str = format!{"SB({})", calc_cons_id[index].1 as char};
         }
-        let write_string = format!("{} : {} {} {} {} {:?} {} {} {:?}\n", quality_vec_chr[index], index, read.len(), read_sevenbase_context, pacbio_str, sn_vec, ip_vec[index], pw_vec[index], parallel_bases);
-        print!("{}", write_string);
+        let write_string = format!("{} : {} {} {} {} {:?} {} {} {:?}\n", (quality_vec_chr[index] - 33), index, read.len(), read_sevenbase_context, pacbio_str, sn_vec, ip_vec[index], pw_vec[index], parallel_bases);
+        print!("Thread_ID {}: {}", thread_id, write_string);
     }
     return
 }
