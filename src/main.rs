@@ -153,7 +153,7 @@ fn one_function (read: String, quality: String, mut sub_reads: Vec<String>, mut 
     // reverse if score is too low
     (sub_reads, pw_vec, ip_vec) = check_the_scores_and_change_alignment_subreads_pw_ip(sub_reads, pw_vec, ip_vec, &read);
     // put the read in first pos
-    sub_reads.insert(0, read);
+    sub_reads.insert(0, read.clone());
     // do poa with the read and subreads, get the poa and consensus
     let mut sequence_number: usize = 0;
     let mut aligner = Aligner::new(MATCH, MISMATCH, GAP_OPEN, &sub_reads[0].as_bytes().to_vec(), BAND_SIZE);
