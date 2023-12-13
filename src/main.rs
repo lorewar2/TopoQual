@@ -32,7 +32,7 @@ fn main() {
     thread_runner(read_file_dir, num_of_threads);
 }
 
-fn thread_runner (read_file_dir: String, num_of_threads: usize) {
+fn thread_runner (read_file_dir: String, _num_of_threads: usize) {
     // make a process to read the reads and save it in memomory
     let ps_child = Command::new("samtools")
         .arg("view")      
@@ -225,121 +225,6 @@ fn one_function (read: String, quality: String, mut sub_reads: Vec<String>, mut 
         println!("{}", write_string);
     }
     return
-}
-
-fn reverse_complement_filter_and_rearrange_subreads (original_subreads: &Vec<String>) -> Vec<String> {
-    let mut seqvec: Vec<String> = vec![];
-    //reverse complement every other line
-    let mut index = 0;
-    for seq in original_subreads {
-        if index % 2 != 0 {
-            let mut tempseq: Vec<char> = vec![];
-            let iterator = seq.chars().rev().into_iter();
-            for char in iterator{
-                tempseq.push(match char {
-                    'A' => 'T',
-                    'C' => 'G',
-                    'G' => 'C',
-                    'T' => 'A',
-                    _ => ' ',
-                });
-            }
-            seqvec.push(tempseq.iter().cloned().collect::<String>());
-        }
-        else {
-            seqvec.push((*seq.clone()).to_string());
-        }
-        index += 1;
-    }
-    //get rid of the last incomplete reading
-    //seqvec.pop();
-    //sort the vector by size
-    seqvec.sort_by_key(|seq| seq.len());
-    //drop the sequences which are > 1.8x median size
-    let median_size: f32 = seqvec[(seqvec.len() / 2) - 1].len() as f32;
-    let mut drop_index = seqvec.len();
-    for index in (seqvec.len() / 2)..(seqvec.len() - 1) {
-        if seqvec[index].len() as f32 > (median_size * 1.5) {
-            drop_index = index;
-            break;
-        }
-    }
-    for _ in drop_index..seqvec.len() {
-        seqvec.pop();
-    }
-    // rearrange the seq vector median first and rest according mediand size difference
-    seqvec.sort_by(|a, b| ((a.len() as f32 - median_size).abs()).partial_cmp(&(b.len() as f32 - median_size).abs()).unwrap());
-    seqvec
-}
-
-fn check_the_scores_and_change_alignment (seqvec: Vec<String>, pacbio_consensus: &String) -> Vec<String> {
-    let mut forward_score = 0;
-    let mut backward_score = 0;
-    // make the pacbio orientation files
-    let pacbio_forward = pacbio_consensus.as_bytes().to_vec();
-    let pacbio_backward;
-    let mut tempseq: Vec<char> = vec![];
-    let iterator = pacbio_consensus.chars().rev().into_iter();
-    for char in iterator{
-        tempseq.push(match char {
-            'A' => 'T',
-            'C' => 'G',
-            'G' => 'C',
-            'T' => 'A',
-            _ => ' ',
-        });
-    }
-    pacbio_backward = tempseq.iter().cloned().collect::<String>().as_bytes().to_vec();
-    // check the forward scores for 2 sequences
-    for seq in &seqvec {
-        let score_func = |a: u8, b: u8| if a == b { 1i32 } else { -1i32 };
-        let k = 8; // kmer match length
-        let w = 20; // Window size for creating the band
-        let mut aligner = BandedDP::new(-5, -1, score_func, k, w);
-        let alignment = aligner.local(&pacbio_forward, &seq.as_bytes().to_vec());
-        let score = alignment.score;
-        println!("forward score: {}", score);
-        forward_score += score;
-        break;
-    }
-    // check the backward scores for 2 sequences
-    for seq in &seqvec {
-        let score_func = |a: u8, b: u8| if a == b { 1i32 } else { -1i32 };
-        let k = 8; // kmer match length
-        let w = 20; // Window size for creating the band
-        let mut aligner = BandedDP::new(-5, -1, score_func, k, w);
-        let alignment = aligner.local(&pacbio_backward, &seq.as_bytes().to_vec());
-        let score = alignment.score;
-        println!("backward score: {}", score);
-        backward_score += score;
-        break;
-    }
-    if forward_score < SKIP_SCORE && backward_score < SKIP_SCORE {
-        return vec![];
-    }
-    else if backward_score > forward_score {
-        println!("Scores are too low, inverting sequences.");
-        let mut seqvec2 = vec![];
-        //reverse complement every line
-        for seq in &seqvec {
-            let mut tempseq: Vec<char> = vec![];
-            let iterator = seq.chars().rev().into_iter();
-            for char in iterator{
-                tempseq.push(match char {
-                    'A' => 'T',
-                    'C' => 'G',
-                    'G' => 'C',
-                    'T' => 'A',
-                    _ => ' ',
-                });
-            }
-            seqvec2.push(tempseq.iter().cloned().collect::<String>());
-        }
-        return seqvec2;
-    }
-    else {
-        return seqvec;
-    }
 }
 
 fn reverse_complement_subreads_ip_pw (original_subreads: &Vec<String>, mut pw_vec: Vec<Vec<usize>>, mut ip_vec: Vec<Vec<usize>>) -> (Vec<String>, Vec<Vec<usize>>, Vec<Vec<usize>>) {
