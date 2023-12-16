@@ -8,6 +8,8 @@ use petgraph::Direction::Outgoing;
 use std::cmp;
 use petgraph::{Incoming, Direction};
 use std::thread;
+use std::fs::create_dir_all;
+use std::{fs::OpenOptions, io::{prelude::*}};
 
 const PRINT_ALL: bool = false;
 const USEPACBIODATA: bool = true;
@@ -107,14 +109,15 @@ fn thread_runner (read_file_dir: String, num_of_threads: usize) {
                     //process the read
                     if subreads_vec.len() > 0 {
                         println!("processing {} sub reads {}: progress {}/{}", current_read_name, subreads_vec.len(), read_index, read_count);
+                        let name = read_name_vec[read_index].2;
                         let read = read_name_vec[read_index].0.clone();
-                        let name = read_name_vec[read_index].1.clone();
+                        let quality = read_name_vec[read_index].1.clone();
                         let subreads = subreads_vec.clone();
                         let ip_stuff = ip_vec.clone();
                         let pw_stuff = pw_vec.clone();
                         let sn_stuff = sn_vec.clone();
                         children.push(thread::spawn(move || {
-                            one_function(read, name, subreads, ip_stuff, pw_stuff, sn_stuff, threads_used);
+                            one_function(name, read, quality, subreads, ip_stuff, pw_stuff, sn_stuff, threads_used);
                         }));
                         threads_used += 1;
                         if threads_used == num_of_threads {
@@ -147,9 +150,13 @@ fn thread_runner (read_file_dir: String, num_of_threads: usize) {
             }
         }
     }
+    // wait for the last remaining children to finish
+    for child in children {
+        child.join();
+    }
 }
 
-fn one_function (read: String, quality: String, mut sub_reads: Vec<String>, mut ip_vec: Vec<Vec<usize>>, mut pw_vec: Vec<Vec<usize>>, sn_vec: Vec<f32>, thread_id: usize) {
+fn one_function (file_name: String, read: String, quality: String, mut sub_reads: Vec<String>, mut ip_vec: Vec<Vec<usize>>, mut pw_vec: Vec<Vec<usize>>, sn_vec: Vec<f32>, thread_id: usize) {
     // graph!!
     // filter out the long reads and rearrange the reads
     (sub_reads, pw_vec, ip_vec) = reverse_complement_subreads_ip_pw(&sub_reads, pw_vec, ip_vec);
@@ -244,9 +251,19 @@ fn one_function (read: String, quality: String, mut sub_reads: Vec<String>, mut 
             pacbio_str = format!{"SB({})", calc_cons_id[index].1 as char};
         }
         let write_string = format!("{} : {} {} {} {} {:?} {} {} {:?}\n", (quality_vec_chr[index] - 33), index, read.len(), read_sevenbase_context, pacbio_str, sn_vec, ip_vec[index], pw_vec[index], parallel_bases);
-        print!("Thread_ID {}: {}", thread_id, write_string);
+        let write_path = format!("{}{}", "./intermediate/", file_name.replace("/", "."));
+        write_string(write_path, write_string);
+        //print!("Thread_ID {}: {}", thread_id, write_string);
     }
     return
+}
+
+pub fn write_string_to_file (file_name: &String, input_string: &String) {
+    let path = std::path::Path::new(&file_name);
+    let prefix = path.parent().unwrap();
+    create_dir_all(prefix).unwrap();
+    let mut file = OpenOptions::new().create(true).append(true).open(file_name).unwrap();
+    write!(file, "{}", input_string).expect("result file cannot be written");
 }
 
 fn reverse_complement_subreads_ip_pw (original_subreads: &Vec<String>, mut pw_vec: Vec<Vec<usize>>, mut ip_vec: Vec<Vec<usize>>) -> (Vec<String>, Vec<Vec<usize>>, Vec<Vec<usize>>) {
