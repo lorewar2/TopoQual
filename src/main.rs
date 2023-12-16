@@ -109,7 +109,7 @@ fn thread_runner (read_file_dir: String, num_of_threads: usize) {
                     //process the read
                     if subreads_vec.len() > 0 {
                         println!("processing {} sub reads {}: progress {}/{}", current_read_name, subreads_vec.len(), read_index, read_count);
-                        let name = read_name_vec[read_index].2;
+                        let name = read_name_vec[read_index].2.clone();
                         let read = read_name_vec[read_index].0.clone();
                         let quality = read_name_vec[read_index].1.clone();
                         let subreads = subreads_vec.clone();
@@ -252,7 +252,7 @@ fn one_function (file_name: String, read: String, quality: String, mut sub_reads
         }
         let write_string = format!("{} : {} {} {} {} {:?} {} {} {:?}\n", (quality_vec_chr[index] - 33), index, read.len(), read_sevenbase_context, pacbio_str, sn_vec, ip_vec[index], pw_vec[index], parallel_bases);
         let write_path = format!("{}{}", "./intermediate/", file_name.replace("/", "."));
-        write_string(write_path, write_string);
+        write_string_to_file(&write_path, &write_string);
         //print!("Thread_ID {}: {}", thread_id, write_string);
     }
     return
