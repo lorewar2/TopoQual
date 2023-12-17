@@ -10,6 +10,7 @@ import pysam
 
 DATA_PATH = "./intermediate/"
 MODEL_PATH = "./result/model/multi_layered_model.pt"
+TEMP_READ_FILE = "./intermediate/"
 CONTEXT_COUNT = 3
 EXTRA_COUNT = 20
 
@@ -23,10 +24,13 @@ def main():
     return
 
 def test_pysam():
-    samfile = pysam.AlignmentFile("read.bam", "rb")
-    outfile = pysam.AlignmentFile("read_modified.bam", "wb")
+    samfile = pysam.AlignmentFile("read.bam", "rb", check_sq=False)
+    outfile = pysam.AlignmentFile("read_modified.bam", "wb", template=samfile)
     for read in samfile:
         read.query_name = read.query_name + '_add_info'
+        print(read.query_sequence)
+        read.query_sequence = "AAACCC"
+        read.query_qualities = pysam.qualitystring_to_array("111333")
         outfile.write(read)
     return
 

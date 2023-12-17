@@ -250,10 +250,14 @@ fn one_function (file_name: String, read: String, quality: String, mut sub_reads
             parallel_bases = parallel_bases_vec[calc_cons_id[index].0].clone(); //subsitution the value corrospond to the sub
             pacbio_str = format!{"SB({})", calc_cons_id[index].1 as char};
         }
-        let write_string = format!("{} : {} {} {} {} {:?} {} {} {:?}\n", (quality_vec_chr[index] - 33), index, read.len(), read_sevenbase_context, pacbio_str, sn_vec, ip_vec[index], pw_vec[index], parallel_bases);
-        let write_path = format!("{}{}", "./intermediate/", file_name.replace("/", "."));
-        write_string_to_file(&write_path, &write_string);
-        //print!("Thread_ID {}: {}", thread_id, write_string);
+        // sn vec padding
+        let sn_vec_str = format!("[{:0>7} {:0>7} {:0>7} {:0>7}]", sn_vec[0], sn_vec[1], sn_vec[2], sn_vec[3]);
+        // parallel bases padding
+        let parallel_bases_str = format!("[{:0>2} {:0>2} {:0>2} {:0>2}]", parallel_bases[0], parallel_bases[1], parallel_bases[2], parallel_bases[3]);
+        let write_string = format!("{:0>2} : {:0>5} {:0>5} {} {} {:?} {:0>3} {:0>3} {:?}\n", (quality_vec_chr[index] - 33), index, read.len(), read_sevenbase_context, pacbio_str, sn_vec, ip_vec[index], pw_vec[index], parallel_bases);
+        //let write_path = format!("{}{}", "./intermediate/", file_name.replace("/", "."));
+        //write_string_to_file(&write_path, &write_string);
+        print!("Thread_ID {}: {}", thread_id, write_string);
     }
     return
 }
