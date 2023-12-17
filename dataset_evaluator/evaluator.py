@@ -6,9 +6,9 @@ from dataset import QualityDataset
 from torch.utils.data import DataLoader
 import random
 import math
+import pysam
 
-DATA_PATH = "/data1/hifi_consensus/processed_data/chr2_ip_pw_filtered.txt"
-RAW_PATH = "/data1/hifi_consensus/processed_data/chr1_ip_pw.txt"
+DATA_PATH = "./intermediate/"
 MODEL_PATH = "./result/model/multi_layered_model.pt"
 CONTEXT_COUNT = 3
 EXTRA_COUNT = 20
@@ -19,10 +19,25 @@ def main():
     random.seed(3)
     np.random.seed(2)
     #evaluate_model()
+    test_pysam()
+    return
+
+def test_pysam():
+    samfile = pysam.AlignmentFile("read.bam", "rb")
+    outfile = pysam.AlignmentFile("read_modified.bam", "wb")
+    for read in samfile:
+        read.query_name = read.query_name + '_add_info'
+        outfile.write(read)
     return
 
 # this function will evalute the model and aggregate the results (output of the model for wrong and right)
 def evaluate_model():
+    # go throught the files and make a list
+
+    # initialize bam file with header and stuff
+
+    # load each file to dataloader, get the quality scores and write to bam file
+
     tensor_length = pow(5, CONTEXT_COUNT) + EXTRA_COUNT
     # arrays to save the result
     error_counts = [0] * 94
