@@ -6,11 +6,11 @@ from dataset import QualityDataset
 from torch.utils.data import DataLoader
 import random
 import math
+import os
 import pysam
 
 DATA_PATH = "./intermediate/"
-MODEL_PATH = "./result/model/multi_layered_model.pt"
-TEMP_READ_FILE = "./intermediate/"
+MODEL_PATH = "./dataset_evaluator/result/model/multi_layered_model_new.pt"
 CONTEXT_COUNT = 3
 EXTRA_COUNT = 20
 
@@ -19,42 +19,41 @@ def main():
     torch.manual_seed(1)
     random.seed(3)
     np.random.seed(2)
-    #evaluate_model()
-    test_pysam()
+    # get the arguments read bam and output bam paths
+    create_modified_bam()
     return
 
-def test_pysam():
-    samfile = pysam.AlignmentFile("read.bam", "rb", check_sq=False)
-    outfile = pysam.AlignmentFile("read_modified.bam", "wb", template=samfile)
-    for read in samfile:
-        read.query_name = read.query_name + '_add_info'
-        print(read.query_sequence)
-        read.query_sequence = "AAACCC"
-        read.query_qualities = pysam.qualitystring_to_array("111333")
+def create_modified_bam():
+    infile = pysam.AlignmentFile("read.bam", "rb", check_sq = False)
+    outfile = pysam.AlignmentFile("read_modified.bam", "wb", template = infile)
+    for read in infile:
+        required_query_name = read.query_name
+        # find the query in the intermediate folder
+        required_path = "{}{}".format(DATA_PATH, required_query_name.replace("/", "."))
+        if os.path.isfile(required_path):
+            (polished_seq, polished_qual) = evaluate(required_path)
+        else:
+            continue
+        # save the sequence and qualities to the new bam
+        read.query_sequence = polished_seq
+        read.query_qualities = pysam.qualitystring_to_array(polished_qual)
         outfile.write(read)
     return
 
-# this function will evalute the model and aggregate the results (output of the model for wrong and right)
-def evaluate_model():
-    # go throught the files and make a list
-
-    # initialize bam file with header and stuff
-
-    # load each file to dataloader, get the quality scores and write to bam file
-
+# this function will evalute the model and return the sequence and the quality scores
+def evaluate(file_path):
     tensor_length = pow(5, CONTEXT_COUNT) + EXTRA_COUNT
     # arrays to save the result
-    error_counts = [0] * 94
-    all_counts = [0] * 94
-    batch_size = 1024
-    # get the data to test
-    eval_dataset = QualityDataset (DATA_PATH, False, CONTEXT_COUNT)
+    polished_sequence_arr = []
+    polisehed_quality_arr = []
+    # get the data from the file
+    eval_dataset = QualityDataset (file_path, False, CONTEXT_COUNT)
     eval_loader = DataLoader (
         dataset = eval_dataset,
-        batch_size = batch_size,
+        batch_size = 1,
         num_workers = 64,
         shuffle = False,
-        drop_last = True
+        drop_last = False
     )
     eval_len = len(eval_loader)
     # load the model
@@ -64,21 +63,26 @@ def evaluate_model():
     # run the data
     with torch.no_grad():
         lr_model.eval()
-        for batch_idx, (batch_inputs, batch_labels) in enumerate(eval_loader):
+        for batch_idx, (batch_inputs, calling_base) in enumerate(eval_loader):
+            if calling_base == "X":
+                continue
+            # get the quality prediction
             pred = lr_model(batch_inputs)
-            for i in range(len(batch_inputs)):
-                pacbio_qual = batch_inputs[i][0][tensor_length - 5].item()
-                position = int(-10 * math.log((1.0 - pred[i].item()) + 0.000000000001, 10))
-                if position > 92:
-                    position = 93
-                all_counts[position] += 1
-                if batch_labels[i].item() < 0.5 and pacbio_qual > 0.001:
-                    error_counts[position] += 1
-                # save the output and stuff
+            quality = int(-10 * math.log((1.0 - pred.item()) + 0.000000000001, 10))
+            # scale todo !!!!!!!!!
+
+            # convert to char todo !!!!!!!!!!!!!
+
+            # cut off
+            if quality > 52:
+                quality = 52
+            # add base and qual to array
+            polished_sequence_arr.append(calling_base)
+            polisehed_quality_arr.append(quality)
             print("Evaluating {}/{}".format(batch_idx, eval_len))
-    print(all_counts)
-    print(error_counts)
+    # convert both to string to do !!!!!!!!!!!!
+    
+    return (polished_sequence_arr, polisehed_quality_arr)
 
-
-if __name__ == "__main__":
+if __name__ == "__main__":  
     main()
