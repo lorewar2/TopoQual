@@ -10,7 +10,7 @@ import os
 import pysam
 
 DATA_PATH = "./intermediate/"
-MODEL_PATH = "./dataset_evaluator/result/model/multi_layered_model_new.pt"
+MODEL_PATH = "./dataset_evaluator/model/multi_layered_model_new.pt"
 CONTEXT_COUNT = 3
 EXTRA_COUNT = 20
 
@@ -24,7 +24,7 @@ def main():
     return
 
 def create_modified_bam():
-    infile = pysam.AlignmentFile("read.bam", "rb", check_sq = False)
+    infile = pysam.AlignmentFile("./sample_files/test.ccs.bam", "rb", check_sq = False)
     outfile = pysam.AlignmentFile("read_modified.bam", "wb", template = infile)
     for read in infile:
         required_query_name = read.query_name
