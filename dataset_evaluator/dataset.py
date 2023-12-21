@@ -12,7 +12,7 @@ class QualityDataset(torch.utils.data.Dataset):
         with open(file_loc) as f:
             f.seek(0, 2)
             offset = f.tell()
-            self.len = int((offset - 90) / 90) - 1
+            self.len = int((offset - 87) / 87) - 1
         # load all data
         if self.shuffle_all:
             # make a shuffled index
@@ -37,10 +37,10 @@ class QualityDataset(torch.utils.data.Dataset):
         return (input_tensor, calling_base)
 
     def retrieve_item_from_disk(self, index):
-        # search the index file to file the location # index offset is 90
+        # search the index file to file the location # index offset is 87
         retrieved_line = ""
         with open(self.file_loc) as f1:
-            f1.seek(index * 90)
+            f1.seek(index * 87)
             retrieved_line = f1.readline()
         split_txt = retrieved_line.split(" ")
         # case of corrupted data $dont use this$
