@@ -68,7 +68,7 @@ def evaluate(file_path):
         for batch_idx, (batch_inputs, calling_base) in enumerate(eval_loader):
             # get the quality prediction
             pred = lr_model(batch_inputs)
-            for idx in range(batch_size):
+            for idx in range(len(calling_base)):
                 if calling_base[idx] == "X":
                     continue
                 # get the quality prediction
