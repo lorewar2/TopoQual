@@ -34,6 +34,8 @@ def create_modified_bam():
             (polished_seq, polished_qual) = evaluate(required_path)
         else:
             continue
+        print(polished_seq)
+        print(polished_qual)
         # save the sequence and qualities to the new bam
         read.query_sequence = polished_seq
         read.query_qualities = pysam.qualitystring_to_array(polished_qual)
@@ -45,7 +47,7 @@ def evaluate(file_path):
     tensor_length = pow(5, CONTEXT_COUNT) + EXTRA_COUNT
     # arrays to save the result
     polished_sequence_arr = []
-    polisehed_quality_arr = []
+    polished_quality_arr = []
     # get the data from the file
     eval_dataset = QualityDataset (file_path, False, CONTEXT_COUNT)
     eval_loader = DataLoader (
@@ -69,20 +71,19 @@ def evaluate(file_path):
             # get the quality prediction
             pred = lr_model(batch_inputs)
             quality = int(-10 * math.log((1.0 - pred.item()) + 0.000000000001, 10))
-            # scale todo !!!!!!!!!
-
-            # convert to char todo !!!!!!!!!!!!!
-
             # cut off
             if quality > 52:
                 quality = 52
+            if quality < 20:
+                quality = 20
             # add base and qual to array
-            polished_sequence_arr.append(calling_base)
-            polisehed_quality_arr.append(quality)
+            polished_sequence_arr.append(chr(calling_base))
+            polished_quality_arr.append(chr(quality))
             print("Evaluating {}/{}".format(batch_idx, eval_len))
-    # convert both to string to do !!!!!!!!!!!!
-    
-    return (polished_sequence_arr, polisehed_quality_arr)
+    # convert both to string
+    polished_sequence_string = "".join([str(i) for i in polished_sequence_arr])
+    polisehed_quality_string = "".join([str(i) for i in polished_quality_arr])
+    return (polished_sequence_string, polisehed_quality_string)
 
 if __name__ == "__main__":  
     main()
