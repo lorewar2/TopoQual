@@ -11,7 +11,7 @@ import os
 import pysam
 
 DATA_PATH = "./intermediate/"
-MODEL_PATH = "./dataset_evaluator/model/multi_layered_model_new.pt"
+MODEL_PATH = "./model/multi_layered_model_new.pt"
 CONTEXT_COUNT = 3
 EXTRA_COUNT = 20
 INPUT_FILE = "./sample_files/test.ccs.bam"

@@ -150,10 +150,6 @@ fn thread_runner (read_file_dir: String, num_of_threads: usize) {
             }
         }
     }
-    // wait for the last remaining children to finish
-    for child in children {
-        child.join();
-    }
 }
 
 fn one_function (file_name: String, read: String, quality: String, mut sub_reads: Vec<String>, mut ip_vec: Vec<Vec<usize>>, mut pw_vec: Vec<Vec<usize>>, sn_vec: Vec<f32>, thread_id: usize) {
