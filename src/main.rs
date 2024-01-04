@@ -108,7 +108,7 @@ fn thread_runner (read_file_dir: String, num_of_threads: usize) {
                 else {
                     //process the read
                     if subreads_vec.len() > 0 {
-                        println!("processing {} sub reads {}: progress {}/{}", current_read_name, subreads_vec.len(), read_index, read_count);
+                        println!("Main Thread: processing {} sub reads {}: progress {}/{}", current_read_name, subreads_vec.len(), read_index, read_count);
                         let name = read_name_vec[read_index].2.clone();
                         let read = read_name_vec[read_index].0.clone();
                         let quality = read_name_vec[read_index].1.clone();
@@ -121,10 +121,10 @@ fn thread_runner (read_file_dir: String, num_of_threads: usize) {
                         }));
                         threads_used += 1;
                         if threads_used == num_of_threads {
-                            println!("Waiting for threads to finish......");
+                            println!("Main Thread: Waiting for threads to finish......");
                             for child_index in 0..children.len() {
                                 let _ = children.pop().unwrap().join();
-                                println!("Threads done {}/{}", child_index, num_of_threads);
+                                println!("Main Thread: Threads done {}/{}", child_index, num_of_threads);
                             }
                             threads_used = 0;
                         }
@@ -251,9 +251,9 @@ fn one_function (file_name: String, read: String, quality: String, mut sub_reads
         // parallel bases padding
         let parallel_bases_str = format!("[{:0>2} {:0>2} {:0>2} {:0>2}]", parallel_bases[0], parallel_bases[1], parallel_bases[2], parallel_bases[3]);
         let write_string = format!("{:0>2} : {:0>5} {:0>5} {} {} {} {:0>3} {:0>3} {}\n", (quality_vec_chr[index] - 33), index, read.len(), read_sevenbase_context, pacbio_str, sn_vec_str, ip_vec[index], pw_vec[index], parallel_bases_str);
-        //let write_path = format!("{}{}", "./intermediate/", file_name.replace("/", "."));
-        //write_string_to_file(&write_path, &write_string);
-        print!("Thread_ID {}: {}", thread_id, write_string);
+        let write_path = format!("{}{}", "./intermediate/", file_name.replace("/", "."));
+        write_string_to_file(&write_path, &write_string);
+        //print!("Thread_ID {}: {}", thread_id, write_string);
     }
     return
 }

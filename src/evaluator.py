@@ -43,6 +43,8 @@ def main(argv):
 def create_modified_bam(inputfile, outputfile):
     inbam = pysam.AlignmentFile(inputfile, "rb", check_sq = False)
     outbam = pysam.AlignmentFile(outputfile, "wb", template = inbam)
+    total_len = len(inbam)
+    index = 0
     for read in inbam:
         required_query_name = read.query_name
         # find the query in the intermediate folder
@@ -51,12 +53,14 @@ def create_modified_bam(inputfile, outputfile):
             (polished_seq, polished_qual) = evaluate(required_path)
         else:
             continue
-        print(polished_seq)
-        print(polished_qual)
+        #print(polished_seq)
+        #print(polished_qual)
         # save the sequence and qualities to the new bam
         read.query_sequence = polished_seq
         read.query_qualities = pysam.qualitystring_to_array(polished_qual)
         outbam.write(read)
+        index += 1
+        print("Progress {} / {}".format(index, total_len))
     return
 
 # this function will evalute the model and return the sequence and the quality scores
