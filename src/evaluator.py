@@ -7,8 +7,8 @@ from dataset import QualityDataset
 from torch.utils.data import DataLoader
 import random
 import math
-import os
 import pysam
+import os, os.path
 
 DATA_PATH = "./intermediate/"
 MODEL_PATH = "./model/multi_layered_model_new.pt"
@@ -43,7 +43,7 @@ def main(argv):
 def create_modified_bam(inputfile, outputfile):
     inbam = pysam.AlignmentFile(inputfile, "rb", check_sq = False)
     outbam = pysam.AlignmentFile(outputfile, "wb", template = inbam)
-    total_len = len(inbam)
+    total_len = len([name for name in os.listdir(DATA_PATH) if os.path.isfile(os.path.join(DATA_PATH, name))])
     index = 0
     for read in inbam:
         required_query_name = read.query_name
