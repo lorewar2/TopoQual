@@ -31,11 +31,33 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     let num_of_threads = args[1].clone().parse::<usize>().unwrap();
     let read_file_dir = args[2].clone();
+    let mut test = false;
+    // check whether it is test file or not
+    if read_file_dir == "./sample_files/test.ccs.bam" {
+        test = true;
+    }
     // read bam and run threads to poa, parallel output
-    thread_runner(read_file_dir, num_of_threads);
+    thread_runner(read_file_dir, num_of_threads, test);
 }
 
-fn thread_runner (read_file_dir: String, num_of_threads: usize) {
+fn thread_runner (read_file_dir: String, num_of_threads: usize, test: bool) {
+    // change the locations if test
+    let subread_loc;
+    let ip_loc;
+    let pw_loc;
+    let sn_loc;
+    if test {
+        subread_loc = 9;
+        ip_loc = 13;
+        pw_loc = 15;
+        sn_loc = 19;
+    }
+    else {
+        subread_loc = 9;
+        ip_loc = 12;
+        pw_loc = 14;
+        sn_loc = 18;
+    }
     let mut threads_used = 0;
     let mut children = vec![];
     // make a process to read the reads and save it in memomory
@@ -73,22 +95,22 @@ fn thread_runner (read_file_dir: String, num_of_threads: usize) {
                 // get all the required info
                 let parts = input.split("\t").collect::<Vec<&str>>();
                 let name_full = parts[0].to_string();
-                let sub_read = parts[9].to_string();
+                let sub_read = parts[subread_loc].to_string();
                 let mut temp_subread_ip_vec = vec![];
                 let mut temp_subread_pw_vec = vec![];
                 let mut temp_sn_vec = vec![];
-                let mut ip_collection: Vec<&str> = parts[13].split(",").collect();
+                let mut ip_collection: Vec<&str> = parts[ip_loc].split(",").collect();
                 ip_collection.remove(0);
                 for ip in ip_collection {
                     temp_subread_ip_vec.push(ip.parse::<usize>().unwrap());
                 }
                 // process pw, parse to usize
-                let mut pw_collection: Vec<&str> = parts[15].split(",").collect();
+                let mut pw_collection: Vec<&str> = parts[pw_loc].split(",").collect();
                 pw_collection.remove(0);
                 for pw in pw_collection {
                     temp_subread_pw_vec.push(pw.parse::<usize>().unwrap());
                 }
-                let mut sn_collection: Vec<&str> = parts[19].split(",").collect();
+                let mut sn_collection: Vec<&str> = parts[sn_loc].split(",").collect();
                 sn_collection.remove(0);
                 for sn in sn_collection {
                     temp_sn_vec.push(sn.parse::<f32>().unwrap());
