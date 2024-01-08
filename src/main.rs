@@ -349,7 +349,7 @@ fn check_the_scores_and_change_alignment_subreads_pw_ip (seqvec: Vec<String>, mu
         let mut aligner = BandedDP::new(-5, -1, score_func, k, w);
         let alignment = aligner.local(&pacbio_forward, &seq.as_bytes().to_vec());
         let score = alignment.score;
-        println!("forward score: {}", score);
+        //println!("forward score: {}", score);
         forward_score += score;
         break;
     }
@@ -361,7 +361,7 @@ fn check_the_scores_and_change_alignment_subreads_pw_ip (seqvec: Vec<String>, mu
         let mut aligner = BandedDP::new(-5, -1, score_func, k, w);
         let alignment = aligner.local(&pacbio_backward, &seq.as_bytes().to_vec());
         let score = alignment.score;
-        println!("backward score: {}", score);
+        //println!("backward score: {}", score);
         backward_score += score;
         break;
     }
@@ -369,7 +369,7 @@ fn check_the_scores_and_change_alignment_subreads_pw_ip (seqvec: Vec<String>, mu
         return (vec![], vec![], vec![]);
     }
     else if backward_score > forward_score {
-        println!("Scores are too low, inverting sequences.");
+        //println!("Scores are too low, inverting sequences.");
         let mut seqvec2 = vec![];
         //reverse complement every line
         for seq in &seqvec {
