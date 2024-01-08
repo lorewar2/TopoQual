@@ -24,7 +24,6 @@ const SKIP_SCORE: i32 = 6_000;
 
 use std::io::{self};
 use std::env;
-use std::process::{Command, Stdio};
 use std::str;
 
 fn main() {
@@ -37,23 +36,8 @@ fn main() {
     if read_file_dir == "./sample_files/test.ccs.bam" {
         test = true;
     }
-    test_htslib(read_file_dir);
-    // 
     // read bam and run threads to poa, parallel output
-    //thread_runner(read_file_dir, num_of_threads, test);
-}
-
-fn test_htslib (read_file_dir: String) {
-    let mut bam = bam::Reader::from_path(&read_file_dir).unwrap();
-    let mut read_name_vec: Vec<(String, String, String)> = vec![]; // read quality name
-    let mut read_count = 0;
-    // go through the reads
-    for r in bam.records() {
-        let record = r.unwrap();
-        read_name_vec.push(((String::from_utf8(record.seq().as_bytes()).unwrap()), (String::from_utf8(record.qual().to_vec()).unwrap()), (String::from_utf8(record.qname().to_vec()).unwrap())));
-        read_count += 1;
-        println!("reading {} {:?}", read_count, read_name_vec[read_name_vec.len() - 1]);
-    }
+    thread_runner(read_file_dir, num_of_threads, test);
 }
 
 fn thread_runner (read_file_dir: String, num_of_threads: usize, test: bool) {
@@ -76,24 +60,15 @@ fn thread_runner (read_file_dir: String, num_of_threads: usize, test: bool) {
     }
     let mut threads_used = 0;
     let mut children = vec![];
-    // make a process to read the reads and save it in memomory
-    let ps_child = Command::new("samtools")
-        .arg("view")      
-        .arg(read_file_dir)
-        .stdout(Stdio::piped())
-        .spawn()                 
-        .unwrap();
-    let output = ps_child.wait_with_output().unwrap();
-    let result: Vec<_> = str::from_utf8(&output.stdout).unwrap().lines().collect();
-    println!("Collecting the reads");
-    // save the reads and names
-    let mut read_count = 0;
+    let mut bam = bam::Reader::from_path(&read_file_dir).unwrap();
     let mut read_name_vec: Vec<(String, String, String)> = vec![]; // read quality name
-    for line in result {
-        let test = String::from(line);
-        let parts = test.split("\t").collect::<Vec<&str>>();
-        read_name_vec.push((parts[9].to_string(), parts[10].to_string(), parts[0].to_string()));
+    let mut read_count = 0;
+    // go through the reads
+    for r in bam.records() {
+        let record = r.unwrap();
+        read_name_vec.push(((String::from_utf8(record.seq().as_bytes()).unwrap()), (String::from_utf8(record.qual().to_vec()).unwrap()), (String::from_utf8(record.qname().to_vec()).unwrap())));
         read_count += 1;
+        println!("Saving reads {}/{}", read_count, read_name_vec.len());
     }
     println!("Done collecting, Total reads = {}", read_count);
     // sub read processing and call functions appropriately
