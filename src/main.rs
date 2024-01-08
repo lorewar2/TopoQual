@@ -10,6 +10,7 @@ use petgraph::{Incoming, Direction};
 use std::thread;
 use std::fs::create_dir_all;
 use std::{fs::OpenOptions, io::{prelude::*}};
+use rust_htslib::{bam, bam::Read};
 
 const PRINT_ALL: bool = false;
 const USEPACBIODATA: bool = true;
@@ -36,8 +37,23 @@ fn main() {
     if read_file_dir == "./sample_files/test.ccs.bam" {
         test = true;
     }
+    test_htslib(read_file_dir);
+    // 
     // read bam and run threads to poa, parallel output
-    thread_runner(read_file_dir, num_of_threads, test);
+    //thread_runner(read_file_dir, num_of_threads, test);
+}
+
+fn test_htslib (read_file_dir: String) {
+    let mut bam = bam::Reader::from_path(&read_file_dir).unwrap();
+    let mut read_name_vec: Vec<(String, String, String)> = vec![]; // read quality name
+    let mut read_count = 0;
+    // go through the reads
+    for r in bam.records() {
+        let record = r.unwrap();
+        read_name_vec.push(((String::from_utf8(record.seq().as_bytes()).unwrap()), (String::from_utf8(record.qual().to_vec()).unwrap()), (String::from_utf8(record.qname().to_vec()).unwrap())));
+        read_count += 1;
+        println!("reading {} {:?}", read_count, read_name_vec[read_name_vec.len() - 1]);
+    }
 }
 
 fn thread_runner (read_file_dir: String, num_of_threads: usize, test: bool) {
