@@ -22,7 +22,7 @@ pip install numpy
 
 ## Usage
 
-Run the samples with Topoqual
+Run the test sample with Topoqual
 
 ```bash
 git clone https://github.com/lorewar2/TopoQual.git

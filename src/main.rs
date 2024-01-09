@@ -61,105 +61,118 @@ fn thread_runner (read_file_dir: String, num_of_threads: usize, test: bool) {
     let mut threads_used = 0;
     let mut children = vec![];
     let mut bam = bam::Reader::from_path(&read_file_dir).unwrap();
-    let mut read_name_vec: Vec<(String, String, String)> = vec![]; // read quality name
     let mut read_count = 0;
-    // go through the reads
-    for r in bam.records() {
-        let record = r.unwrap();
-        read_name_vec.push(((String::from_utf8(record.seq().as_bytes()).unwrap()), (String::from_utf8(record.qual().to_vec()).unwrap()), (String::from_utf8(record.qname().to_vec()).unwrap())));
-        read_count += 1;
-        println!("Saving reads {}/{}", read_count, read_name_vec.len());
-    }
-    println!("Done collecting, Total reads = {}", read_count);
-    // sub read processing and call functions appropriately
-    let mut read_index = 0;
     let mut subreads_vec: Vec<String> = vec![];
     let mut ip_vec: Vec<Vec<usize>> = vec![];
     let mut pw_vec: Vec<Vec<usize>> = vec![];
     let mut sn_vec: Vec<f32> = vec![];
-    loop {
-        let mut input = String::new();
-        match io::stdin().read_line(&mut input) {
-            Ok(len) => if len == 0 {
-                return;
-            } else {
-                // get all the required info
-                let parts = input.split("\t").collect::<Vec<&str>>();
-                let name_full = parts[0].to_string();
-                let sub_read = parts[subread_loc].to_string();
-                let mut temp_subread_ip_vec = vec![];
-                let mut temp_subread_pw_vec = vec![];
-                let mut temp_sn_vec = vec![];
-                let mut ip_collection: Vec<&str> = parts[ip_loc].split(",").collect();
-                ip_collection.remove(0);
-                for ip in ip_collection {
-                    temp_subread_ip_vec.push(ip.parse::<usize>().unwrap());
-                }
-                // process pw, parse to usize
-                let mut pw_collection: Vec<&str> = parts[pw_loc].split(",").collect();
-                pw_collection.remove(0);
-                for pw in pw_collection {
-                    temp_subread_pw_vec.push(pw.parse::<usize>().unwrap());
-                }
-                let mut sn_collection: Vec<&str> = parts[sn_loc].split(",").collect();
-                sn_collection.remove(0);
-                for sn in sn_collection {
-                    temp_sn_vec.push(sn.parse::<f32>().unwrap());
-                }
-                // get the read name
-                let subread_read_name = name_full.split("/").collect::<Vec<&str>>()[1];
-                println!("{}", name_full);
-                let current_read_name = read_name_vec[read_index].2.split("/").collect::<Vec<&str>>()[1];
-                println!("{} {}", current_read_name, subread_read_name);
-                if current_read_name == subread_read_name {
-                    // add data to vector
-                    subreads_vec.push(sub_read);
-                    pw_vec.push(temp_subread_pw_vec);
-                    ip_vec.push(temp_subread_ip_vec);
-                    sn_vec = temp_sn_vec;
-                }
-                else {
-                    //process the read
-                    if subreads_vec.len() > 0 {
-                        println!("Main Thread: processing {} sub reads {}: progress {}/{}", current_read_name, subreads_vec.len(), read_index, read_count);
-                        let name = read_name_vec[read_index].2.clone();
-                        let read = read_name_vec[read_index].0.clone();
-                        let quality = read_name_vec[read_index].1.clone();
-                        let subreads = subreads_vec.clone();
-                        let ip_stuff = ip_vec.clone();
-                        let pw_stuff = pw_vec.clone();
-                        let sn_stuff = sn_vec.clone();
-                        children.push(thread::spawn(move || {
-                            one_function(name, read, quality, subreads, ip_stuff, pw_stuff, sn_stuff, threads_used);
-                        }));
-                        threads_used += 1;
-                        if threads_used == num_of_threads {
-                            println!("Main Thread: Waiting for threads to finish......");
-                            for child_index in 0..children.len() {
-                                let _ = children.pop().unwrap().join();
-                                println!("Main Thread: Threads done {}/{}", child_index, num_of_threads);
+    let mut last_read_matched: bool = false;
+    let mut last_sub_read_name: String = "".to_string();
+    // go through the reads
+    for r in bam.records() {
+        let record = r.unwrap();
+        // save the current read, quality and name
+        let read_name_set = ((String::from_utf8(record.seq().as_bytes()).unwrap()), (String::from_utf8(record.qual().to_vec()).unwrap()), (String::from_utf8(record.qname().to_vec()).unwrap()));
+        read_count += 1;
+        // retrieve the subreads
+        loop {
+            let mut input = String::new();
+            match io::stdin().read_line(&mut input) {
+                Ok(len) => if len == 0 {
+                    return;
+                } else {
+                    // get all the required info
+                    let parts = input.split("\t").collect::<Vec<&str>>();
+                    let name_full = parts[0].to_string();
+                    let sub_read = parts[subread_loc].to_string();
+                    let mut temp_subread_ip_vec = vec![];
+                    let mut temp_subread_pw_vec = vec![];
+                    let mut temp_sn_vec = vec![];
+                    let mut ip_collection: Vec<&str> = parts[ip_loc].split(",").collect();
+                    ip_collection.remove(0);
+                    for ip in ip_collection {
+                        temp_subread_ip_vec.push(ip.parse::<usize>().unwrap());
+                    }
+                    // process pw, parse to usize
+                    let mut pw_collection: Vec<&str> = parts[pw_loc].split(",").collect();
+                    pw_collection.remove(0);
+                    for pw in pw_collection {
+                        temp_subread_pw_vec.push(pw.parse::<usize>().unwrap());
+                    }
+                    let mut sn_collection: Vec<&str> = parts[sn_loc].split(",").collect();
+                    sn_collection.remove(0);
+                    for sn in sn_collection {
+                        temp_sn_vec.push(sn.parse::<f32>().unwrap());
+                    }
+                    // get the read name
+                    let subread_read_name = name_full.split("/").collect::<Vec<&str>>()[1];
+                    println!("{}", name_full);
+                    let current_read_name = read_name_set.2.split("/").collect::<Vec<&str>>()[1];
+                    println!("current read name {}  subread_name {}", current_read_name, subread_read_name);
+                    println!("previous subread name {} subread name {}", last_sub_read_name, subread_read_name);
+                    if last_sub_read_name != subread_read_name.to_string() {
+                        subreads_vec.clear();
+                        pw_vec.clear();
+                        ip_vec.clear();
+                    }
+                    last_sub_read_name = subread_read_name.to_string();
+                    if current_read_name == subread_read_name {
+                        // add data to vector
+                        subreads_vec.push(sub_read);
+                        pw_vec.push(temp_subread_pw_vec);
+                        ip_vec.push(temp_subread_ip_vec);
+                        sn_vec = temp_sn_vec;
+                        last_read_matched = true;
+                    }
+                    else {
+                        //process the read
+                        if subreads_vec.len() > 1 && last_read_matched {
+                            println!("Main Thread: processing {} sub reads {}: read_number {}", current_read_name, subreads_vec.len(), read_count);
+                            let name = read_name_set.2.clone();
+                            let read = read_name_set.0.clone();
+                            let quality = read_name_set.1.clone();
+                            let subreads = subreads_vec.clone();
+                            let ip_stuff = ip_vec.clone();
+                            let pw_stuff = pw_vec.clone();
+                            let sn_stuff = sn_vec.clone();
+                            children.push(thread::spawn(move || {
+                                one_function(name, read, quality, subreads, ip_stuff, pw_stuff, sn_stuff, threads_used);
+                            }));
+                            threads_used += 1;
+                            if threads_used == num_of_threads {
+                                println!("Main Thread: Waiting for threads to finish......");
+                                for child_index in 0..children.len() {
+                                    let _ = children.pop().unwrap().join();
+                                    println!("Main Thread: Threads done {}/{}", child_index, num_of_threads);
+                                }
+                                threads_used = 0;
                             }
-                            threads_used = 0;
+                            // clear the vector, add the data
+                            subreads_vec.clear();
+                            pw_vec.clear();
+                            ip_vec.clear();
+                            subreads_vec.push(sub_read.clone());
+                            pw_vec.push(temp_subread_pw_vec.clone());
+                            ip_vec.push(temp_subread_ip_vec.clone());
+                            sn_vec = temp_sn_vec.clone();
+                            last_read_matched = false;
+                        }
+                        else {
+                            // clear the vector, add the data
+                            subreads_vec.clear();
+                            pw_vec.clear();
+                            ip_vec.clear();
+                            subreads_vec.push(sub_read.clone());
+                            pw_vec.push(temp_subread_pw_vec.clone());
+                            ip_vec.push(temp_subread_ip_vec.clone());
+                            sn_vec = temp_sn_vec.clone();
                         }
                     }
-                    // clear the vector, add the data
-                    subreads_vec.clear();
-                    pw_vec.clear();
-                    ip_vec.clear();
-                    subreads_vec.push(sub_read);
-                    pw_vec.push(temp_subread_pw_vec);
-                    ip_vec.push(temp_subread_ip_vec);
-                    sn_vec = temp_sn_vec;
-                    // increment index
-                    read_index += 1;
-                    if read_index > read_count - 1 {
-                        return;
-                    } 
                 }
-            }
-            Err(error) => {
-                eprintln!("error: {}", error);
-                return;
+                Err(error) => {
+                    eprintln!("error: {}", error);
+                    return;
+                }
             }
         }
     }
