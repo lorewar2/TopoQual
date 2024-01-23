@@ -278,14 +278,14 @@ fn one_function (file_name: String, read: String, quality: String, mut sub_reads
         let sn_vec_str = format!("[{:0>7} {:0>7} {:0>7} {:0>7}]", sn_vec[0], sn_vec[1], sn_vec[2], sn_vec[3]);
         // parallel bases padding
         let parallel_bases_str = format!("[{:0>2} {:0>2} {:0>2} {:0>2}]", parallel_bases[0], parallel_bases[1], parallel_bases[2], parallel_bases[3]);
-        let mut quality_current = 93;
-        if quality_vec_chr[index] > 93 {
+        let quality_current;
+        if quality_vec_chr[index] >= 93 {
             quality_current = 93;
         }
         else {
             quality_current = quality_vec_chr[index];
         }
-        let write_string = format!("{:0>2} : {:0>5} {:0>5} {} {} {} {:0>3} {:0>3} {}\n", quality_vec_chr[index], index, read.len(), read_sevenbase_context, pacbio_str, sn_vec_str, ip_vec[index], pw_vec[index], parallel_bases_str);
+        let write_string = format!("{:0>2} : {:0>5} {:0>5} {} {} {} {:0>3} {:0>3} {}\n", quality_current, index, read.len(), read_sevenbase_context, pacbio_str, sn_vec_str, ip_vec[index], pw_vec[index], parallel_bases_str);
         let write_path = format!("{}{}", "./intermediate/", file_name.replace("/", "."));
         write_string_to_file(&write_path, &write_string);
         //print!("Thread_ID {}: {}", thread_id, write_string);
