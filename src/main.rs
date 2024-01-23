@@ -126,6 +126,7 @@ fn thread_runner (read_file_dir: String, num_of_threads: usize, test: bool) {
                     }
                     else {
                         //process the read
+                        println!("THIS ONE RAN match {} len {} ", last_read_matched, subreads_vec.len());
                         if subreads_vec.len() > 1 && last_read_matched {
                             println!("Main Thread: processing {} sub reads {}: read_number {}", current_read_name, subreads_vec.len(), read_count);
                             let name = read_name_set.2.clone();
