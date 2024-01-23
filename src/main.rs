@@ -130,6 +130,7 @@ fn thread_runner (read_file_dir: String, num_of_threads: usize, test: bool) {
                 }
                 else if current_read_name == last_sub_read_name {
                     println!("PREV MATCH PROCESSING");
+                    get_next_read = true;
                     println!("Main Thread: processing {} sub reads {}: read_number {}", current_read_name, subreads_vec.len(), read_count);
                     let name = read_name_set.2.clone();
                     let read = read_name_set.0.clone();
