@@ -31,6 +31,7 @@ bash script.sh
 ```
 
 Modify input/ouput variables to point to your data in script.sh and run
+(Decrease/Increase the thread count depending on the memory availability, 1 thread requires ~10GB of memory)
 
 ```bash
 bash script.sh
