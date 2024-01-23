@@ -66,7 +66,6 @@ fn thread_runner (read_file_dir: String, num_of_threads: usize, test: bool) {
     let mut ip_vec: Vec<Vec<usize>> = vec![];
     let mut pw_vec: Vec<Vec<usize>> = vec![];
     let mut sn_vec: Vec<f32> = vec![];
-    let mut last_read_matched: bool = false;
     let mut last_sub_read_name: String = "".to_string();
     // go through the reads
     for r in bam.records() {
@@ -110,65 +109,56 @@ fn thread_runner (read_file_dir: String, num_of_threads: usize, test: bool) {
                     let current_read_name = read_name_set.2.split("/").collect::<Vec<&str>>()[1];
                     println!("current read name {}  subread_name {}", current_read_name, subread_read_name);
                     println!("previous subread name {} subread name {}", last_sub_read_name, subread_read_name);
-                    if last_sub_read_name != subread_read_name.to_string() {
-                        subreads_vec.clear();
-                        pw_vec.clear();
-                        ip_vec.clear();
-                    }
-                    last_sub_read_name = subread_read_name.to_string();
                     if current_read_name == subread_read_name {
+                        println!("CURRENT MATCH ADDING");
                         // add data to vector
                         subreads_vec.push(sub_read);
                         pw_vec.push(temp_subread_pw_vec);
                         ip_vec.push(temp_subread_ip_vec);
                         sn_vec = temp_sn_vec;
-                        last_read_matched = true;
+                    }
+                    else if current_read_name == last_sub_read_name {
+                        println!("PREV MATCH PROCESSING");
+                        println!("Main Thread: processing {} sub reads {}: read_number {}", current_read_name, subreads_vec.len(), read_count);
+                        let name = read_name_set.2.clone();
+                        let read = read_name_set.0.clone();
+                        let quality = read_name_set.1.clone();
+                        let subreads = subreads_vec.clone();
+                        let ip_stuff = ip_vec.clone();
+                        let pw_stuff = pw_vec.clone();
+                        let sn_stuff = sn_vec.clone();
+                        children.push(thread::spawn(move || {
+                            one_function(name, read, quality, subreads, ip_stuff, pw_stuff, sn_stuff, threads_used);
+                        }));
+                        threads_used += 1;
+                        if threads_used == num_of_threads {
+                            println!("Main Thread: Waiting for threads to finish......");
+                            for child_index in 0..children.len() {
+                                let _ = children.pop().unwrap().join();
+                                println!("Main Thread: Threads done {}/{}", child_index, num_of_threads);
+                            }
+                            threads_used = 0;
+                        }
+                        // clear the vector, add the data
+                        subreads_vec.clear();
+                        pw_vec.clear();
+                        ip_vec.clear();
+                        subreads_vec.push(sub_read.clone());
+                        pw_vec.push(temp_subread_pw_vec.clone());
+                        ip_vec.push(temp_subread_ip_vec.clone());
+                        sn_vec = temp_sn_vec.clone();
                     }
                     else {
-                        //process the read
-                        println!("THIS ONE RAN match {} len {} ", last_read_matched, subreads_vec.len());
-                        if subreads_vec.len() > 1 && last_read_matched {
-                            println!("Main Thread: processing {} sub reads {}: read_number {}", current_read_name, subreads_vec.len(), read_count);
-                            let name = read_name_set.2.clone();
-                            let read = read_name_set.0.clone();
-                            let quality = read_name_set.1.clone();
-                            let subreads = subreads_vec.clone();
-                            let ip_stuff = ip_vec.clone();
-                            let pw_stuff = pw_vec.clone();
-                            let sn_stuff = sn_vec.clone();
-                            children.push(thread::spawn(move || {
-                                one_function(name, read, quality, subreads, ip_stuff, pw_stuff, sn_stuff, threads_used);
-                            }));
-                            threads_used += 1;
-                            if threads_used == num_of_threads {
-                                println!("Main Thread: Waiting for threads to finish......");
-                                for child_index in 0..children.len() {
-                                    let _ = children.pop().unwrap().join();
-                                    println!("Main Thread: Threads done {}/{}", child_index, num_of_threads);
-                                }
-                                threads_used = 0;
-                            }
-                            // clear the vector, add the data
-                            subreads_vec.clear();
-                            pw_vec.clear();
-                            ip_vec.clear();
-                            subreads_vec.push(sub_read.clone());
-                            pw_vec.push(temp_subread_pw_vec.clone());
-                            ip_vec.push(temp_subread_ip_vec.clone());
-                            sn_vec = temp_sn_vec.clone();
-                            last_read_matched = false;
-                        }
-                        else {
-                            // clear the vector, add the data
-                            subreads_vec.clear();
-                            pw_vec.clear();
-                            ip_vec.clear();
-                            subreads_vec.push(sub_read.clone());
-                            pw_vec.push(temp_subread_pw_vec.clone());
-                            ip_vec.push(temp_subread_ip_vec.clone());
-                            sn_vec = temp_sn_vec.clone();
-                        }
+                        println!("NO MATCH CLEARING");
+                        subreads_vec.clear();
+                        pw_vec.clear();
+                        ip_vec.clear();
+                        subreads_vec.push(sub_read.clone());
+                        pw_vec.push(temp_subread_pw_vec.clone());
+                        ip_vec.push(temp_subread_ip_vec.clone());
+                        sn_vec = temp_sn_vec.clone();
                     }
+                    last_sub_read_name = subread_read_name.to_string();
                 }
                 Err(error) => {
                     eprintln!("error: {}", error);
