@@ -22,12 +22,21 @@ pip install numpy
 
 ## Usage
 
+TEST DATA:
+
 Run the test sample with Topoqual
 
 ```bash
 git clone https://github.com/lorewar2/TopoQual.git
 cd TopoQual
 bash script.sh
+```
+
+REAL DATA:
+
+```bash
+git clone https://github.com/lorewar2/TopoQual.git
+cd TopoQual
 ```
 
 Modify input/ouput variables to point to your data in script.sh and run
