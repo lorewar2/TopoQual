@@ -22,25 +22,27 @@ pip install numpy
 
 ## Usage
 
+Download the repository.
+
+```bash
+git clone https://github.com/lorewar2/TopoQual.git
+```
+
+Configure the thread count in script.sh (Decrease/Increase the thread count depending on the memory availability, 1 thread requires ~10GB of memory)
+
 TEST DATA:
 
 Run the test sample with Topoqual
 
 ```bash
-git clone https://github.com/lorewar2/TopoQual.git
-cd TopoQual
 bash script.sh
 ```
 
 REAL DATA:
 
-```bash
-git clone https://github.com/lorewar2/TopoQual.git
-cd TopoQual
-```
+Modify input/ouput variables to point to your data in script.sh
 
-Modify input/ouput variables to point to your data in script.sh and run
-(Decrease/Increase the thread count depending on the memory availability, 1 thread requires ~10GB of memory)
+Run the real sample with Topoqual
 
 ```bash
 bash script.sh
