@@ -4,6 +4,7 @@ TopoQual polishes Pacific Biosciences (PacBio) Circular Consensus Sequencing (CC
 
 ## Setting up / Requirements
 
+rust 1.65.0+ and python 3.9+ should be installed.
 The following programs/packages are required for topoqual to run properly,
 
 *   [`samtools`](http://www.htslib.org/) - to read the subread bam file.
