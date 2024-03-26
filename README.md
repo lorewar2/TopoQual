@@ -53,4 +53,4 @@ bash script.sh
 
 If you are using TopoQual in your work, please cite:
 
-[TopoQual polishes circular consensus sequencing data and accurately predicts quality scores](https://link.com)
+[TopoQual polishes circular consensus sequencing data and accurately predicts quality scores](https://www.biorxiv.org/content/10.1101/2024.02.08.579541v1)
