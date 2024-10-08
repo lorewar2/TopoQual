@@ -12,7 +12,7 @@ class QualityDataset(torch.utils.data.Dataset):
         with open(file_loc) as f:
             f.seek(0, 2)
             offset = f.tell()
-            self.len = int((offset - 87) / 87) - 1
+            self.len = int((offset - 108) / 108) - 1
         # load all data
         if self.shuffle_all:
             # make a shuffled index
@@ -40,41 +40,41 @@ class QualityDataset(torch.utils.data.Dataset):
         # search the index file to file the location # index offset is 87
         retrieved_line = ""
         with open(self.file_loc) as f1:
-            f1.seek(index * 87)
+            f1.seek(index * 108)
             retrieved_line = f1.readline()
         split_txt = retrieved_line.split(" ")
         # case of corrupted data $dont use this$
-        if len(split_txt) != 16:
+        if len(split_txt) != 18:
             print("====================ERROR=========================")
             return (torch.zeros(1, self.tensor_length), "X")
         # get the calling base and the state if opao
-        calling_base, poa_state = self.get_state_info(split_txt[5])
+        calling_base, poa_state = self.get_state_info(split_txt[7])
         if calling_base == "X":
-            calling_base = split_txt[4][3]
+            calling_base = split_txt[1][3]
         # get the required base context
         if self.base_context_count == 3:
-            base_context = [split_txt[4][2], calling_base, split_txt[4][4]]
+            base_context = [split_txt[1][2], calling_base, split_txt[1][4]]
         elif self.base_context_count == 5:
-            base_context = [split_txt[4][1], split_txt[4][2], calling_base, split_txt[4][4], split_txt[4][5]]
+            base_context = [split_txt[1][1], split_txt[1][2], calling_base, split_txt[1][4], split_txt[1][5]]
         else:
-            base_context = [split_txt[4][0], split_txt[4][1], split_txt[4][2], calling_base, split_txt[4][4], split_txt[4][5], split_txt[4][6]]
+            base_context = [split_txt[1][0], split_txt[1][1], split_txt[1][2], calling_base, split_txt[1][4], split_txt[1][5], split_txt[1][6]]
         # get the number from the base context
         converted_number = self.convert_bases_to_bits(base_context, self.base_context_count)
         hot_encoded = [0.0] * pow(5, self.base_context_count)
         hot_encoded[converted_number] = 1.0
         # get the read length and position information
-        base_pos_info = self.read_len_info(int(split_txt[2]), int(split_txt[3]))
+        base_pos_info = self.read_len_info(int(split_txt[4]), int(split_txt[5]))
         # get quality in float
-        quality = float(split_txt[0]) / 100
+        quality = float(split_txt[2]) / 100
         # get the num of parallel bases in float
-        parallel_vec_f = self.clean_string_get_array([split_txt[12], split_txt[13], split_txt[14], split_txt[15]])
+        parallel_vec_f = self.clean_string_get_array([split_txt[14], split_txt[15], split_txt[16], split_txt[17]])
         # retrieve sn
-        sn_vec_f = self.clean_string_get_array([split_txt[6], split_txt[7], split_txt[8], split_txt[9]])
+        sn_vec_f = self.clean_string_get_array([split_txt[8], split_txt[9], split_txt[10], split_txt[11]])
         # get the required sn details
-        sn_info = self.process_sn_info([split_txt[4][2], split_txt[4][3], split_txt[4][4]], calling_base, sn_vec_f)
+        sn_info = self.process_sn_info([split_txt[6][2], split_txt[6][3], split_txt[6][4]], calling_base, sn_vec_f)
         # get pw and ip
-        ip = float(split_txt[10])
-        pw = float(split_txt[11])
+        ip = float(split_txt[12])
+        pw = float(split_txt[13])
         # rearrange so that the calling base num first and rest in decending order
         sorted_vec = self.rearrange_sort_parallel_bases(parallel_vec_f, calling_base)
         # make and append to the input tensor,
