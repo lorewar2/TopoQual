@@ -17,27 +17,30 @@ EXTRA_COUNT = 20
 INPUT_FILE = "./sample_files/test.ccs.bam"
 OUTPUT_FILE = "read_modified.bam"
 
-def main(argv):
-    # get arguments input file and output file
-    inputfile = ''
-    outputfile = ''
-    opts, args = getopt.getopt(argv, "hi:o:",["ifile=","ofile="])
-    for opt, arg in opts:
-        if opt == '-h':
-            print ('evaluate.py -i <inputbam> -o <outputbam>')
-            sys.exit()
-        elif opt in ("-i", "--ifile"):
-            inputfile = arg
-        elif opt in ("-o", "--ofile"):
-            outputfile = arg
-    print ('Input bam is ', inputfile)
-    print ('Output bam is ', outputfile)
-    # set the seed
-    torch.manual_seed(1)
-    random.seed(3)
-    np.random.seed(2)
-    # get the arguments read bam and output bam paths
-    create_modified_bam(inputfile, outputfile)
+# def main(argv):
+#     # get arguments input file and output file
+#     inputfile = ''
+#     outputfile = ''
+#     opts, args = getopt.getopt(argv, "hi:o:",["ifile=","ofile="])
+#     for opt, arg in opts:
+#         if opt == '-h':
+#             print ('evaluate.py -i <inputbam> -o <outputbam>')
+#             sys.exit()
+#         elif opt in ("-i", "--ifile"):
+#             inputfile = arg
+#         elif opt in ("-o", "--ofile"):
+#             outputfile = arg
+#     print ('Input bam is ', inputfile)
+#     print ('Output bam is ', outputfile)
+#     # set the seed
+#     torch.manual_seed(1)
+#     random.seed(3)
+#     np.random.seed(2)
+#     # get the arguments read bam and output bam paths
+#     create_modified_bam(inputfile, outputfile)
+#     return
+def main():
+    evaluate("test.txt")
     return
 
 def create_modified_bam(inputfile, outputfile):
@@ -66,9 +69,6 @@ def create_modified_bam(inputfile, outputfile):
 # this function will evalute the model and return the sequence and the quality scores
 def evaluate(file_path):
     batch_size = 1024
-    # arrays to save the result
-    polished_sequence_arr = []
-    polished_quality_arr = []
     # get the data from the file
     eval_dataset = QualityDataset (file_path, False, CONTEXT_COUNT)
     eval_loader = DataLoader (
@@ -95,19 +95,16 @@ def evaluate(file_path):
                 # get the quality prediction
                 quality = int(-10 * math.log((1.0 - pred[idx].item()) + 0.000000000001, 10))
                 # cut off
+                print("before ", quality)
+                quality = quality + 33
                 if quality > 52:
                     quality = 52
                 if quality < 20:
                     quality = 20
-                quality = quality + 33
+                print("after ", quality)
                 # add base and qual to array
-                polished_sequence_arr.append(calling_base[idx])
-                polished_quality_arr.append(chr(quality))
             print("Evaluating {}/{}".format(batch_idx, eval_len))
-    # convert both to string
-    polished_sequence_string = "".join([str(i) for i in polished_sequence_arr])
-    polisehed_quality_string = "".join([str(i) for i in polished_quality_arr])
-    return (polished_sequence_string, polisehed_quality_string)
+    return
 
 if __name__ == "__main__":  
     main(sys.argv[1:])
